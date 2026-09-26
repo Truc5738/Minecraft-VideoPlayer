@@ -86,12 +86,8 @@ public final class JCodecVideoDecoder implements VideoDecoder {
         if (!isOpen()) return;
 
         long target = Math.max(0L, positionMs);
-        try {
-            grab.seekToSecondPrecise(target / 1000.0);
-            this.positionMs = target;
-        } catch (JCodecException ex) {
-            throw new IOException("JCodec seek failed", ex);
-        }
+        grab.seekToSecondPrecise(target / 1000.0);
+        this.positionMs = target;
     }
 
     @Override
