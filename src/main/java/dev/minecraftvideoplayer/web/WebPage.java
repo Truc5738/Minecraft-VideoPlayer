@@ -52,7 +52,6 @@ iframe,#nativeVideo{width:100%;height:100%;border:0}.controls{display:flex;gap:6
 <script>
 let ws=null,yt=null,currentVideo='',currentType='youtube',room=new URLSearchParams(location.search).get('room'),isHost=false,remoteApplying=false;
 const ownerKey='web-'+(localStorage.getItem('mvp-owner')||crypto.randomUUID());localStorage.setItem('mvp-owner',ownerKey);const frame=document.getElementById('frame'),statusEl=document.getElementById('status');
-function updateControls(){document.querySelectorAll('.host-control').forEach(b=>b.disabled=!isHost);statusEl.textContent=isHost?'Host controls enabled.':'Viewer mode: host controls playback.'}
 function sendControl(type,extra={}){if(!ws||ws.readyState!==1||!room){statusEl.textContent='Join a room first.';return}ws.send(JSON.stringify(Object.assign({type:type,room:room,owner:ownerKey},extra)))}
 function api(path,opts={}){let sep=path.includes('?')?'&':'?';return fetch(path+sep+'owner='+encodeURIComponent(ownerKey),Object.assign({headers:{'Content-Type':'application/json'}},opts)).then(r=>r.json())}
 function idOf(s){s=s.trim();let m=s.match(/[?&]v=([A-Za-z0-9_-]{11})/)||s.match(/youtu\.be\/([A-Za-z0-9_-]{11})/)||s.match(/youtube\.com\/(?:shorts|embed)\/([A-Za-z0-9_-]{11})/);return m?m[1]:(/^[A-Za-z0-9_-]{11}$/.test(s)?s:'')}
