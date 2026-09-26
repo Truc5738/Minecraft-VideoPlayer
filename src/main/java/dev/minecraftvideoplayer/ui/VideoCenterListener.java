@@ -54,6 +54,7 @@ public final class VideoCenterListener implements Listener {
                 case 10 -> { screen.setPlaying(true); plugin.getScreens().play(screen.id(), screen.videoId()); player.sendMessage(ChatColor.WHITE + "Screen " + screen.id() + ": Play"); }
                 case 11 -> { plugin.getScreens().pause(screen.id()); player.sendMessage(ChatColor.WHITE + "Screen " + screen.id() + ": Pause"); }
                 case 12 -> { plugin.getScreens().stop(screen.id()); player.sendMessage(ChatColor.WHITE + "Screen " + screen.id() + ": Stop"); }
+                case 13 -> { pendingSource.put(player.getUniqueId(), "screen:" + screen.id()); prompt(player, "Enter a local MP4/MOV file path in chat. Type 'cancel' to stop."); }
                 case 14, 15 -> seek(player, screen.id(), slot == 14 ? -10000L : 10000L);
                 case 22 -> { plugin.getScreens().remove(screen.id()); player.sendMessage(ChatColor.WHITE + "Screen " + screen.id() + " deleted."); VideoCenterMenu.openScreenManager(player, plugin); }
                 case 26 -> VideoCenterMenu.openScreenManager(player, plugin);
@@ -122,7 +123,10 @@ public final class VideoCenterListener implements Listener {
         }
 
         plugin.getServer().getScheduler().runTask(plugin, () -> {
-            var screen = plugin.getScreens().all().values().stream()
+            String screenId = action.startsWith("screen:") ? action.substring("screen:".length()) : null;
+            var selected = screenId == null ? null : plugin.getScreens().get(screenId);
+            if (selected != null && !selected.owner().equals(player.getUniqueId())) selected = null;
+            var screen = selected != null ? selected : plugin.getScreens().all().values().stream()
                     .filter(s -> s.owner().equals(player.getUniqueId()))
                     .findFirst()
                     .orElseGet(() -> {
@@ -138,6 +142,7 @@ public final class VideoCenterListener implements Listener {
                 plugin.getScreens().attachDecoder(screen.id(), playback);
                 plugin.getScreens().play(screen.id(), source);
                 player.sendMessage(ChatColor.WHITE + "Playing native video on screen " + screen.id() + ".");
+                player.sendMessage(ChatColor.WHITE + "Use Screen Control to pause, stop or seek.");
             } catch (Exception ex) {
                 player.sendMessage(ChatColor.WHITE + "Could not open video: " + ex.getMessage());
             }
