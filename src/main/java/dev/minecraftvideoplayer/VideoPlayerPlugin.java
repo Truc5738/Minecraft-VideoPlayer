@@ -33,6 +33,7 @@ public final class VideoPlayerPlugin extends JavaPlugin {
         queue = new PlaybackQueue();
         screens = new dev.minecraftvideoplayer.screen.ScreenManager(this);
         screenRenderer = new dev.minecraftvideoplayer.screen.NativeScreenRenderer(screens);
+        screens.setRenderer(screenRenderer);
         frameDecoderFactory = new GeneratedFrameDecoderFactory();
         dev.minecraftvideoplayer.screen.DecoderFactory.register(frameDecoderFactory);
         loadLibraries();
