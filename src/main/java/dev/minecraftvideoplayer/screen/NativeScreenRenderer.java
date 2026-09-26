@@ -19,6 +19,7 @@ import java.util.UUID;
 
 public final class NativeScreenRenderer {
     private final ScreenManager manager;
+    private final java.util.Map<String, VideoFrameRenderer> renderers = new java.util.concurrent.ConcurrentHashMap<>();
 
     public NativeScreenRenderer(ScreenManager manager) {
         this.manager = manager;
@@ -41,7 +42,9 @@ public final class NativeScreenRenderer {
                 map.setUnlimitedTracking(false);
                 map.setScale(org.bukkit.map.MapView.Scale.CLOSE);
                 map.getRenderers().forEach(map::removeRenderer);
-                map.addRenderer(new PreviewRenderer());
+                VideoFrameRenderer renderer = new VideoFrameRenderer();
+                renderers.put(screen.id() + ":" + x + ":" + y, renderer);
+                map.addRenderer(renderer);
 
                 ItemStack item = new ItemStack(Material.FILLED_MAP);
                 MapMeta meta = (MapMeta) item.getItemMeta();
@@ -54,6 +57,15 @@ public final class NativeScreenRenderer {
 
         screen.setFrameIds(frames.stream().map(e -> e.getUniqueId()).toList());
         player.sendMessage(ChatColor.WHITE + "Native screen preview created: " + screen.id());
+    }
+
+    public void pushFrame(VideoScreen screen, VideoFrame frame) {
+        for (int y = 0; y < screen.height(); y++) {
+            for (int x = 0; x < screen.width(); x++) {
+                VideoFrameRenderer renderer = renderers.get(screen.id() + ":" + x + ":" + y);
+                if (renderer != null) renderer.setFrame(frame);
+            }
+        }
     }
 
     private static final class PreviewRenderer extends MapRenderer {
