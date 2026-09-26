@@ -25,6 +25,10 @@ public final class ScreenManager {
         return screens.remove(id) != null;
     }
 
+    public void clear() {
+        screens.clear();
+    }
+
     public Map<String, VideoScreen> all() {
         return Map.copyOf(screens);
     }
