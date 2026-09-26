@@ -1,26 +1,87 @@
 package dev.minecraftvideoplayer.web;
+
 public final class WebPage {
- private WebPage(){}
- public static final String HTML = """
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Minecraft Video Center</title>
-<style>:root{color-scheme:dark}body{margin:0;background:#090b10;color:#f3f4f6;font:14px system-ui,sans-serif}main{max-width:1180px;margin:auto;padding:24px}.box{background:#121620;border:1px solid #272e3b;border-radius:16px;padding:18px;margin-bottom:14px}.row{display:flex;gap:8px;flex-wrap:wrap}input,button,select{background:#0b0e14;color:#fff;border:1px solid #303746;border-radius:9px;padding:11px}input{flex:1;min-width:180px}button{cursor:pointer}.player{position:relative;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden}iframe{width:100%;height:100%;border:0}.grid{display:grid;grid-template-columns:2fr 1fr;gap:14px}.result{padding:11px;border-top:1px solid #272e3b;cursor:pointer}.result:hover{background:#1a1f2a}.muted{color:#9ca6b5}.controls{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}@media(max-width:800px){.grid{grid-template-columns:1fr}}</style></head>
+    private WebPage() {}
+
+    public static final String HTML = """
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minecraft Video Center</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#090b10;color:#f3f4f6;font:14px system-ui,sans-serif}
+main{max-width:1280px;margin:auto;padding:18px}.box{background:#121620;border:1px solid #272e3b;border-radius:14px;padding:16px;margin-bottom:12px}
+h1,h2,h3{margin:0 0 10px}.muted{color:#9ca6b5}.row{display:flex;gap:7px;flex-wrap:wrap}
+input,button{background:#0b0e14;color:#fff;border:1px solid #303746;border-radius:8px;padding:10px}input{flex:1;min-width:170px}button{cursor:pointer}
+.grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:12px}.player{position:relative;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden}
+iframe,#nativeVideo{width:100%;height:100%;border:0}.controls{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.result,.item{padding:9px;border-top:1px solid #272e3b;cursor:pointer}.result:hover,.item:hover{background:#1a1f2a}
+.thumb{width:110px;height:62px;object-fit:cover;border-radius:6px;margin-right:8px;vertical-align:middle}.pill{display:inline-block;border:1px solid #303746;border-radius:999px;padding:3px 8px;margin:2px}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.thumb{width:90px;height:50px}}
+</style>
+</head>
 <body><main>
 <div class="box"><h1>Video Center</h1><span class="muted">Minecraft 1.26 | Java + Bedrock/PE | Web Player</span></div>
-<div class="box"><div class="row"><input id="url" placeholder="YouTube URL or video ID"><button onclick="playInput()">Play</button><input id="q" placeholder="Search YouTube"><button onclick="searchYT()">Search</button><button onclick="newRoom()">New Room</button><input id="roomInput" placeholder="Room ID"><button onclick="joinRoom()">Join</button></div></div>
-<div class="grid"><div class="box"><div class="player" id="frame"></div><div class="controls"><button onclick="sendState(false)">Pause</button><button onclick="sendState(true)">Play</button><button onclick="newRoom()">New Room</button></div><p id="status" class="muted">Ready.</p></div>
-<div class="box"><h3>Search Results</h3><div id="results" class="muted">Search to begin.</div><h3>Watch Room</h3><div id="room" class="muted">No room.</div></div></div>
-</main><script>
-let ws,room=new URLSearchParams(location.search).get('room'),currentVideo='';
-const statusEl=document.getElementById('status'),frame=document.getElementById('frame');
+<div class="box"><div class="row">
+<input id="url" placeholder="YouTube URL, video ID, MP4 or HLS URL"><button onclick="playInput()">Play</button>
+<input id="q" placeholder="Search YouTube"><button onclick="searchYT()">Search</button>
+<button onclick="newRoom()">New Room</button><input id="roomInput" placeholder="Room ID"><button onclick="joinRoom()">Join</button>
+</div><div id="status" class="muted" style="margin-top:8px">Ready.</div></div>
+
+<div class="grid"><section>
+<div class="box"><div class="player" id="frame"></div>
+<div class="controls">
+<button onclick="playVideo()">Play</button><button onclick="pauseVideo()">Pause</button><button onclick="stopVideo()">Stop</button>
+<button onclick="seek(-10)">-10s</button><button onclick="seek(10)">+10s</button><button onclick="nextVideo()">Next</button>
+<button onclick="previousVideo()">Previous</button><button onclick="toggleFavorite()">Favorite</button>
+<button onclick="addQueue()">Add Queue</button><button onclick="cycleRepeat()">Repeat</button><button onclick="toggleShuffle()">Shuffle</button>
+<button onclick="fullscreen()">Fullscreen</button>
+</div><div class="row" style="margin-top:9px"><label>Volume <input id="volume" type="range" min="0" max="100" value="80" oninput="setVolume(this.value)"></label></div></div>
+<div class="box"><h2>Search Results</h2><div id="results" class="muted">Search to begin.</div></div>
+</section>
+
+<aside>
+<div class="box"><h2>Watch Room</h2><div id="room" class="muted">No room.</div><div id="viewers" class="muted"></div></div>
+<div class="box"><h2>Queue</h2><div id="queue" class="muted">Empty.</div><button onclick="clearQueue()">Clear Queue</button></div>
+<div class="box"><h2>Library</h2><div class="row"><button onclick="loadLibrary()">Refresh</button><button onclick="createPlaylist()">New Playlist</button></div>
+<div id="library" class="muted" style="margin-top:8px">Loading...</div></div>
+</aside></div></main>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+let ws=null,yt=null,currentVideo='',currentType='youtube',room=new URLSearchParams(location.search).get('room');
+const ownerKey='web-'+(localStorage.getItem('mvp-owner')||crypto.randomUUID());localStorage.setItem('mvp-owner',ownerKey);
+const frame=document.getElementById('frame'),statusEl=document.getElementById('status');
+function api(path,opts={}){let sep=path.includes('?')?'&':'?';return fetch(path+sep+'owner='+encodeURIComponent(ownerKey),Object.assign({headers:{'Content-Type':'application/json'}},opts)).then(r=>r.json())}
 function idOf(s){s=s.trim();let m=s.match(/[?&]v=([A-Za-z0-9_-]{11})/)||s.match(/youtu\.be\/([A-Za-z0-9_-]{11})/)||s.match(/youtube\.com\/(?:shorts|embed)\/([A-Za-z0-9_-]{11})/);return m?m[1]:(/^[A-Za-z0-9_-]{11}$/.test(s)?s:'')}
-function player(id){currentVideo=id;frame.innerHTML='<iframe src="https://www.youtube.com/embed/'+id+'?enablejsapi=1&autoplay=1" allow="autoplay;encrypted-media;picture-in-picture" allowfullscreen></iframe>';statusEl.textContent='Playing '+id;sendState(true)}
-function playInput(){let id=idOf(document.getElementById('url').value);if(id)player(id);else statusEl.textContent='Invalid YouTube URL or video ID.'}
-function sendState(playing){if(!ws||ws.readyState!==1||!room)return;ws.send(JSON.stringify({type:'state',room,video:currentVideo,time:0,playing}))}
-function connect(){ws=new WebSocket((location.protocol==='https:'?'wss':'ws')+'://'+location.host+'/ws');ws.onopen=()=>{statusEl.textContent='Connected';if(room)ws.send(JSON.stringify({type:'join',room}))};ws.onmessage=e=>{let m=JSON.parse(e.data);if(m.type==='state'&&m.video&&m.video!==currentVideo)playerRemote(m.video,m.playing);};ws.onclose=()=>setTimeout(connect,1500)}
-function playerRemote(id,playing){currentVideo=id;frame.innerHTML='<iframe src="https://www.youtube.com/embed/'+id+'?enablejsapi=1&autoplay='+(playing?1:0)+'" allow="autoplay;encrypted-media;picture-in-picture" allowfullscreen></iframe>';statusEl.textContent='Room synchronized: '+id}
-function searchYT(){let q=document.getElementById('q').value.trim();if(!q)return;fetch('/api/search?q='+encodeURIComponent(q)).then(r=>r.json()).then(x=>{let box=document.getElementById('results');box.innerHTML='';(x.items||[]).forEach(v=>{let d=document.createElement('div');d.className='result';d.textContent=v.title+' — '+v.channel;d.onclick=()=>player(v.id);box.appendChild(d)})}).catch(e=>document.getElementById('results').textContent='Search failed: '+e)}
-function newRoom(){fetch('/api/room/new').then(r=>r.json()).then(x=>{room=x.room;document.getElementById('room').textContent='Room: '+room;history.replaceState(null,'','?room='+room);connect()})}
-function joinRoom(){let id=document.getElementById('roomInput').value.trim();if(id){room=id;document.getElementById('room').textContent='Room: '+room;history.replaceState(null,'','?room='+room);connect()}}
-connect();if(room)document.getElementById('room').textContent='Room: '+room;
-</script></body></html>""";
+function onYouTubeIframeAPIReady(){if(currentType==='youtube'&&currentVideo)createYT(currentVideo,true)}
+function createYT(id,autoplay){frame.innerHTML='<div id="ytplayer"></div>';yt=new YT.Player('ytplayer',{videoId:id,width:'100%',height:'100%',playerVars:{autoplay:autoplay?1:0,rel:0,playsinline:1},events:{onReady:e=>e.target.setVolume(+document.getElementById('volume').value),onStateChange:e=>{if(e.data===1)broadcast(true);else if(e.data===2||e.data===0)broadcast(false)}}})}
+function playMedia(id,autoplay=true){currentVideo=id;currentType='youtube';createYT(id,autoplay);statusEl.textContent='Video: '+id;api('/api/history',{method:'POST',body:JSON.stringify({id:id,title:id,channel:''})}).catch(()=>{})}
+function playInput(){let raw=document.getElementById('url').value.trim(),id=idOf(raw);if(id){playMedia(id,true);return}if(/^https?:\/\//i.test(raw)){currentType='native';currentVideo=raw;frame.innerHTML='<video id="nativeVideo" controls autoplay></video>';let v=document.getElementById('nativeVideo');v.src=raw;statusEl.textContent='Direct media';return}statusEl.textContent='Invalid video URL or ID.'}
+function playVideo(){if(yt)yt.playVideo();else{let v=document.getElementById('nativeVideo');if(v)v.play()}}
+function pauseVideo(){if(yt)yt.pauseVideo();else{let v=document.getElementById('nativeVideo');if(v)v.pause()}}
+function stopVideo(){if(yt)yt.stopVideo();else{let v=document.getElementById('nativeVideo');if(v){v.pause();v.currentTime=0}}broadcast(false)}
+function seek(d){if(yt)yt.seekTo(Math.max(0,yt.getCurrentTime()+d),true);else{let v=document.getElementById('nativeVideo');if(v)v.currentTime=Math.max(0,v.currentTime+d)}}
+function setVolume(v){if(yt)yt.setVolume(+v);else{let e=document.getElementById('nativeVideo');if(e)e.volume=+v/100}}
+function fullscreen(){frame.requestFullscreen?.()}
+function broadcast(playing){if(!ws||ws.readyState!==1||!room)return;let t=yt?yt.getCurrentTime():(document.getElementById('nativeVideo')?.currentTime||0);ws.send(JSON.stringify({type:'state',room:room,video:currentVideo,time:t,playing:playing}))}
+function connect(){if(!room)return;if(ws)try{ws.close()}catch(e){}ws=new WebSocket((location.protocol==='https:'?'wss':'ws')+'://'+location.host+'/ws');ws.onopen=()=>{statusEl.textContent='Room connected: '+room;ws.send(JSON.stringify({type:'join',room:room}))};ws.onmessage=e=>{let m=JSON.parse(e.data);if(m.type==='state'&&m.video&&m.video!==currentVideo)playMedia(m.video,m.playing)};ws.onclose=()=>setTimeout(connect,2000)}
+function searchYT(){let q=document.getElementById('q').value.trim();if(!q)return;fetch('/api/search?q='+encodeURIComponent(q)).then(r=>r.json()).then(x=>{let box=document.getElementById('results');box.innerHTML='';(x.items||[]).forEach(v=>{let d=document.createElement('div');d.className='result';d.innerHTML='<img class="thumb" src="https://i.ytimg.com/vi/'+v.id+'/mqdefault.jpg"><b>'+esc(v.title)+'</b><br><span class="muted">'+esc(v.channel)+'</span>';d.onclick=()=>playMedia(v.id,true);box.appendChild(d)})}).catch(e=>document.getElementById('results').textContent='Search failed: '+e)}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function newRoom(){fetch('/api/room/new').then(r=>r.json()).then(x=>{room=x.room;showRoom();connect()})}
+function joinRoom(){let id=document.getElementById('roomInput').value.trim();if(id){room=id;showRoom();connect()}}
+function showRoom(){document.getElementById('room').textContent='Room: '+room;history.replaceState(null,'','?room='+encodeURIComponent(room))}
+function addQueue(){if(!currentVideo)return;api('/api/queue',{method:'POST',body:JSON.stringify({id:currentVideo,title:currentVideo,channel:''})}).then(loadLibrary)}
+function clearQueue(){api('/api/queue/clear',{method:'POST'}).then(loadLibrary)}
+function toggleFavorite(){if(!currentVideo)return;api('/api/favorite',{method:'POST',body:JSON.stringify({id:currentVideo,title:currentVideo,channel:''})}).then(loadLibrary)}
+function cycleRepeat(){api('/api/queue/repeat',{method:'POST'}).then(x=>statusEl.textContent='Repeat: '+x.repeat)}
+function toggleShuffle(){api('/api/queue/shuffle',{method:'POST'}).then(x=>statusEl.textContent='Shuffle: '+x.shuffle)}
+function nextVideo(){api('/api/queue/next',{method:'POST'}).then(x=>{if(x.video)playMedia(x.video.id,true)})}
+function previousVideo(){api('/api/queue/previous',{method:'POST'}).then(x=>{if(x.video)playMedia(x.video.id,true)})}
+function createPlaylist(){let n=prompt('Playlist name');if(n)api('/api/playlist',{method:'POST',body:JSON.stringify({name:n})}).then(loadLibrary)}
+function loadLibrary(){api('/api/media').then(x=>{let q=document.getElementById('queue');q.innerHTML=(x.queue||[]).map((v,i)=>'<div class="item">'+(i+1)+'. '+esc(v.title)+'</div>').join('')||'<span class="muted">Empty.</span>';let lib=document.getElementById('library'),out='<h3>Favorites</h3>';out+=(x.favorites||[]).map(v=>'<div class="item" onclick="playMedia(\''+esc(v.id)+'\',true)">'+esc(v.title)+'</div>').join('')||'<span class="muted">None</span>';out+='<h3>Playlists</h3>';for(let n in (x.playlists||{}))out+='<div class="pill">'+esc(n)+' ('+x.playlists[n].length+')</div>';out+='<h3>History</h3>'+((x.history||[]).slice(0,10).map(v=>'<div class="item" onclick="playMedia(\''+esc(v.id)+'\',true)">'+esc(v.title)+'</div>').join('')||'<span class="muted">None</span>');lib.innerHTML=out}).catch(()=>{})}
+loadLibrary();if(room){showRoom();connect()}
+</script></body></html>
+""";
 }
