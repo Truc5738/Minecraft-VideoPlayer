@@ -20,6 +20,7 @@ public final class VideoPlayerPlugin extends JavaPlugin {
     private MediaLibrary media;
     private PlaybackQueue queue;
     private dev.minecraftvideoplayer.screen.ScreenManager screens;
+    private dev.minecraftvideoplayer.screen.NativeScreenRenderer screenRenderer;
 
     @Override
     public void onEnable() {
@@ -29,6 +30,7 @@ public final class VideoPlayerPlugin extends JavaPlugin {
         media = new MediaLibrary();
         queue = new PlaybackQueue();
         screens = new dev.minecraftvideoplayer.screen.ScreenManager();
+        screenRenderer = new dev.minecraftvideoplayer.screen.NativeScreenRenderer(screens);
         loadLibraries();
 
         VideoCommand videoCommand = new VideoCommand(this);
@@ -75,4 +77,5 @@ public final class VideoPlayerPlugin extends JavaPlugin {
     public MediaLibrary getMedia() { return media; }
     public PlaybackQueue getQueue() { return queue; }
     public dev.minecraftvideoplayer.screen.ScreenManager getScreens() { return screens; }
+    public dev.minecraftvideoplayer.screen.NativeScreenRenderer getScreenRenderer() { return screenRenderer; }
 }
