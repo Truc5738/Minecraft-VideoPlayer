@@ -31,6 +31,8 @@ public final class VideoPlayerPlugin extends JavaPlugin {
         getCommand("video").setExecutor(vc);
         getCommand("video").setTabCompleter(vc);
         getCommand("videoadmin").setExecutor(new VideoAdminCommand(this));
+        getCommand("videoroom").setExecutor(vc);
+        getCommand("videoroom").setTabCompleter(vc);
 
         webServer = new WebPlayerServer(this);
         webServer.start();
