@@ -26,6 +26,11 @@ public final class WebPlayerServer {
         app = Javalin.create(c -> c.showJavalinBanner = false)
             .get("/", ctx -> ctx.redirect("/player"))
             .get("/player", ctx -> ctx.html(WebPage.HTML))
+            .get("/admin", ctx -> { if (!adminAllowed(ctx)) { ctx.status(401).html("Unauthorized"); return; } ctx.html(AdminPage.HTML); })
+            .get("/api/admin/status", ctx -> { if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; } ctx.json(Map.of("web", getStatus(), "youtubeKeys", plugin.getYouTube().apiKeyCount(), "port", plugin.getConfig().getInt("server.web-port",26467))); })
+            .post("/api/admin/rotate-key", ctx -> { if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; } plugin.getYouTube().rotateApiKey(); ctx.json(Map.of("ok",true)); })
+            .post("/api/admin/save", ctx -> { if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; } plugin.saveLibraries(); ctx.json(Map.of("ok",true)); })
+            .post("/api/admin/reload", ctx -> { if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; } plugin.reloadConfig(); ctx.json(Map.of("ok",true)); })
             .get("/api/health", ctx -> ctx.json(Map.of(
                 "status", "ok", "plugin", "Minecraft-VideoPlayer", "minecraft", "1.26"
             )))
