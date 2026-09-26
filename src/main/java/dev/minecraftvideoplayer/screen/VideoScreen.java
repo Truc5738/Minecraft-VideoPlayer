@@ -13,6 +13,7 @@ public final class VideoScreen {
     private int height;
     private String videoId = "";
     private boolean playing;
+    private java.util.List<UUID> frameIds = java.util.List.of();
 
     public VideoScreen(String id, UUID owner, Location origin, int width, int height) {
         this.id = id;
@@ -30,6 +31,8 @@ public final class VideoScreen {
     public int height() { return height; }
     public String videoId() { return videoId; }
     public boolean playing() { return playing; }
+    public java.util.List<UUID> frameIds() { return frameIds; }
+    public void setFrameIds(java.util.List<UUID> frameIds) { this.frameIds = java.util.List.copyOf(frameIds); }
 
     public void resize(int width, int height) {
         this.width = Math.max(1, Math.min(32, width));
