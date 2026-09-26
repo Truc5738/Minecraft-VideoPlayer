@@ -67,6 +67,7 @@ public final class VideoPlayerPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (screens != null) screens.shutdown();
         saveLibraries();
         if (webServer != null) webServer.stop();
     }
