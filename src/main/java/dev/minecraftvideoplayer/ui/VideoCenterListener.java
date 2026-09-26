@@ -26,12 +26,41 @@ public final class VideoCenterListener implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = event.getView().getTitle();
-        if (!VideoCenterMenu.TITLE.equals(title) && !"Video Player Help".equals(title)) return;
+        if (!VideoCenterMenu.TITLE.equals(title) && !"Video Player Help".equals(title) && !VideoCenterMenu.SCREEN_TITLE.equals(title) && !title.startsWith(VideoCenterMenu.SCREEN_CONTROL_TITLE + " ")) return;
 
         event.setCancelled(true);
         if (event.getClickedInventory() == null || event.getClickedInventory() != event.getView().getTopInventory()) return;
 
         int slot = event.getRawSlot();
+        if (VideoCenterMenu.SCREEN_TITLE.equals(title)) {
+            if (slot == 49) {
+                var screen = plugin.getScreens().create(player, 8, 4);
+                plugin.getScreenRenderer().renderPreview(player, screen);
+                VideoCenterMenu.openScreenManager(player, plugin);
+                return;
+            }
+            if (slot == 50) { player.closeInventory(); return; }
+            if (slot >= 0 && slot < 45) {
+                var screens = plugin.getScreens().all().values().stream().filter(s -> s.owner().equals(player.getUniqueId())).toList();
+                if (slot < screens.size()) VideoCenterMenu.openScreenControl(player, plugin, screens.get(slot).id());
+            }
+            return;
+        }
+        if (title.startsWith(VideoCenterMenu.SCREEN_CONTROL_TITLE + " ")) {
+            String screenId = title.substring((VideoCenterMenu.SCREEN_CONTROL_TITLE + " ").length());
+            var screen = plugin.getScreens().get(screenId);
+            if (screen == null || !screen.owner().equals(player.getUniqueId())) { VideoCenterMenu.openScreenManager(player, plugin); return; }
+            switch (slot) {
+                case 10 -> { screen.setPlaying(true); plugin.getScreens().play(screen.id(), screen.videoId()); player.sendMessage(ChatColor.WHITE + "Screen " + screen.id() + ": Play"); }
+                case 11 -> { plugin.getScreens().pause(screen.id()); player.sendMessage(ChatColor.WHITE + "Screen " + screen.id() + ": Pause"); }
+                case 12 -> { plugin.getScreens().stop(screen.id()); player.sendMessage(ChatColor.WHITE + "Screen " + screen.id() + ": Stop"); }
+                case 14, 15 -> seek(player, screen.id(), slot == 14 ? -10000L : 10000L);
+                case 22 -> { plugin.getScreens().remove(screen.id()); player.sendMessage(ChatColor.WHITE + "Screen " + screen.id() + " deleted."); VideoCenterMenu.openScreenManager(player, plugin); }
+                case 26 -> VideoCenterMenu.openScreenManager(player, plugin);
+                default -> { }
+            }
+            return;
+        }
         if ("Video Player Help".equals(title)) {
             if (slot == 26) player.closeInventory();
             return;
@@ -56,6 +85,22 @@ public final class VideoCenterListener implements Listener {
             }
             case 26 -> player.closeInventory();
             default -> { }
+        }
+    }
+
+    private void seek(Player player, String screenId, long delta) {
+        var field = plugin.getScreens().decoder(screenId);
+        if (field == null) {
+            player.sendMessage(ChatColor.WHITE + "No active decoder on this screen.");
+            return;
+        }
+        try {
+            long target = Math.max(0L, field.positionMs() + delta);
+            field.seek(target);
+            plugin.getScreens().play(screenId, plugin.getScreens().get(screenId).videoId());
+            player.sendMessage(ChatColor.WHITE + "Seeked to " + (target / 1000) + "s.");
+        } catch (Exception ex) {
+            player.sendMessage(ChatColor.WHITE + "Seek failed: " + ex.getMessage());
         }
     }
 
