@@ -150,12 +150,19 @@ public final class WebPlayerServer {
         plugin.getLogger().info("Web Player listening on " + host + ":" + port);
     }
 
+    private boolean adminAllowed(io.javalin.http.Context ctx) { String configured=plugin.getConfig().getString("server.admin-token",""); String supplied=ctx.queryParam("token"); return !configured.isBlank() && configured.equals(supplied); }
+
     private String owner(io.javalin.http.Context ctx) {
         String value = ctx.queryParam("owner");
         return value == null || value.isBlank() ? "web-" + ctx.ip() : value.substring(0, Math.min(80, value.length()));
     }
 
-    private String value(Map<?, ?> map, String key, String fallback) {\n        Object value = map.get(key);\n        return value == null ? fallback : String.valueOf(value);\n    }\n\n    private MediaLibrary.Item item(Map<?, ?> body, String id) {
+    private String value(Map<?, ?> map, String key, String fallback) {
+        Object value = map.get(key);
+        return value == null ? fallback : String.valueOf(value);
+    }
+
+    private MediaLibrary.Item item(Map<?, ?> body, String id) {
         return new MediaLibrary.Item(id,
             value(body, "title", id),
             value(body, "channel", ""));
