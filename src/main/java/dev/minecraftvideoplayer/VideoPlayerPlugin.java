@@ -9,6 +9,7 @@ import dev.minecraftvideoplayer.ui.VideoCenterListener;
 import dev.minecraftvideoplayer.web.WebPlayerServer;
 import dev.minecraftvideoplayer.youtube.YouTubeService;
 import dev.minecraftvideoplayer.screen.GeneratedFrameDecoderFactory;
+import dev.minecraftvideoplayer.screen.NativeFrameBridge;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.nio.file.Path;
@@ -23,6 +24,7 @@ public final class VideoPlayerPlugin extends JavaPlugin {
     private dev.minecraftvideoplayer.screen.ScreenManager screens;
     private dev.minecraftvideoplayer.screen.NativeScreenRenderer screenRenderer;
     private GeneratedFrameDecoderFactory frameDecoderFactory;
+    private NativeFrameBridge frameBridge;
 
     @Override
     public void onEnable() {
@@ -36,6 +38,7 @@ public final class VideoPlayerPlugin extends JavaPlugin {
         screens.setRenderer(screenRenderer);
         frameDecoderFactory = new GeneratedFrameDecoderFactory();
         dev.minecraftvideoplayer.screen.DecoderFactory.register(frameDecoderFactory);
+        frameBridge = new NativeFrameBridge(screens, screenRenderer);
         loadLibraries();
 
         VideoCommand videoCommand = new VideoCommand(this);
@@ -72,6 +75,7 @@ public final class VideoPlayerPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (frameBridge != null) frameBridge.clear();
         if (screens != null) screens.shutdown();
         saveLibraries();
         if (webServer != null) webServer.stop();
@@ -85,4 +89,5 @@ public final class VideoPlayerPlugin extends JavaPlugin {
     public dev.minecraftvideoplayer.screen.ScreenManager getScreens() { return screens; }
     public dev.minecraftvideoplayer.screen.NativeScreenRenderer getScreenRenderer() { return screenRenderer; }
     public GeneratedFrameDecoderFactory getFrameDecoderFactory() { return frameDecoderFactory; }
+    public NativeFrameBridge getFrameBridge() { return frameBridge; }
 }
