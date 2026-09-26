@@ -75,9 +75,10 @@ public final class VideoCenterMenu {
         set(inv, 10, Material.LIME_DYE, "Play", "Start or resume playback.");
         set(inv, 11, Material.YELLOW_DYE, "Pause", "Pause playback.");
         set(inv, 12, Material.RED_DYE, "Stop", "Stop and detach decoder.");
+        set(inv, 13, Material.CHEST, "Load Video", "Load a local MP4/MOV file onto this screen.");
         set(inv, 14, Material.SPECTRAL_ARROW, "Seek -10s", "Seek backward 10 seconds.");
         set(inv, 15, Material.ARROW, "Seek +10s", "Seek forward 10 seconds.");
-        set(inv, 16, Material.FILLED_MAP, "Screen Info", "ID: " + screen.id(), "State: " + (screen.playing() ? "Playing" : "Paused"));
+        set(inv, 16, Material.FILLED_MAP, "Screen Info", "ID: " + screen.id(), "State: " + (screen.playing() ? "Playing" : "Paused"), "Size: " + screen.width() + "x" + screen.height(), "Source: " + (screen.videoId().isBlank() ? "None" : screen.videoId()));
         set(inv, 22, Material.BARRIER, "Delete Screen", "Remove this screen.");
         set(inv, 26, Material.PAINTING, "Back", "Return to Screen Manager.");
         player.openInventory(inv);
