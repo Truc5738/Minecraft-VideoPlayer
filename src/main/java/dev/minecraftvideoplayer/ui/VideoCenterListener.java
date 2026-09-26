@@ -6,11 +6,17 @@ import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
+import java.io.File;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 
 public final class VideoCenterListener implements Listener {
     private final VideoPlayerPlugin plugin;
+    private final Map<UUID, String> pendingSource = new ConcurrentHashMap<>();
 
     public VideoCenterListener(VideoPlayerPlugin plugin) {
         this.plugin = plugin;
@@ -32,7 +38,7 @@ public final class VideoCenterListener implements Listener {
         }
 
         switch (slot) {
-            case 10 -> prompt(player, "Paste a YouTube URL in chat. Type 'cancel' to stop.");
+            case 10 -> { pendingSource.put(player.getUniqueId(), "play"); prompt(player, "Enter a local MP4/MOV file path in chat. Type 'cancel' to stop."); }
             case 11 -> prompt(player, "Type a YouTube search query in chat. Type 'cancel' to stop.");
             case 12 -> player.sendMessage(ChatColor.WHITE + "Queue manager is available from this menu.");
             case 13 -> player.sendMessage(ChatColor.WHITE + "Playlist manager is available from this menu.");
@@ -51,6 +57,46 @@ public final class VideoCenterListener implements Listener {
             case 26 -> player.closeInventory();
             default -> { }
         }
+    }
+
+    @EventHandler
+    public void onChat(AsyncPlayerChatEvent event) {
+        Player player = event.getPlayer();
+        String action = pendingSource.remove(player.getUniqueId());
+        if (action == null) return;
+        event.setCancelled(true);
+
+        String source = event.getMessage().trim();
+        if (source.equalsIgnoreCase("cancel")) {
+            player.sendMessage(ChatColor.WHITE + "Video input cancelled.");
+            return;
+        }
+        if (!dev.minecraftvideoplayer.screen.JCodecVideoDecoder.supportsFile(source) || !new File(source).isFile()) {
+            player.sendMessage(ChatColor.WHITE + "Only an existing local MP4/MOV file is supported by the native decoder.");
+            return;
+        }
+
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            var screen = plugin.getScreens().all().values().stream()
+                    .filter(s -> s.owner().equals(player.getUniqueId()))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        var created = plugin.getScreens().create(player, 8, 4);
+                        plugin.getScreenRenderer().renderPreview(player, created);
+                        return created;
+                    });
+            try {
+                var decoder = dev.minecraftvideoplayer.screen.DecoderFactory.create(source);
+                var playback = new dev.minecraftvideoplayer.screen.DecoderPlayback(
+                        decoder, plugin.getScreens(), plugin.getScreenRenderer(), screen.id());
+                playback.open(source);
+                plugin.getScreens().attachDecoder(screen.id(), playback);
+                plugin.getScreens().play(screen.id(), source);
+                player.sendMessage(ChatColor.WHITE + "Playing native video on screen " + screen.id() + ".");
+            } catch (Exception ex) {
+                player.sendMessage(ChatColor.WHITE + "Could not open video: " + ex.getMessage());
+            }
+        });
     }
 
     @EventHandler
