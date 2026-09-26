@@ -1,10 +1,11 @@
 package dev.minecraftvideoplayer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.minecraftvideoplayer.command.*;
+import dev.minecraftvideoplayer.command.VideoCommand;
 import dev.minecraftvideoplayer.media.MediaLibrary;
 import dev.minecraftvideoplayer.media.PlaybackQueue;
 import dev.minecraftvideoplayer.room.RoomManager;
+import dev.minecraftvideoplayer.ui.VideoCenterListener;
 import dev.minecraftvideoplayer.web.WebPlayerServer;
 import dev.minecraftvideoplayer.youtube.YouTubeService;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -19,6 +20,7 @@ public final class VideoPlayerPlugin extends JavaPlugin {
     private MediaLibrary media;
     private PlaybackQueue queue;
 
+    @Override
     public void onEnable() {
         saveDefaultConfig();
         rooms = new RoomManager();
@@ -27,12 +29,10 @@ public final class VideoPlayerPlugin extends JavaPlugin {
         queue = new PlaybackQueue();
         loadLibraries();
 
-        var vc = new VideoCommand(this);
-        getCommand("video").setExecutor(vc);
-        getCommand("video").setTabCompleter(vc);
-        getCommand("videoadmin").setExecutor(new VideoAdminCommand(this));
-        getCommand("videoroom").setExecutor(vc);
-        getCommand("videoroom").setTabCompleter(vc);
+        VideoCommand videoCommand = new VideoCommand(this);
+        getCommand("video").setExecutor(videoCommand);
+        getCommand("video").setTabCompleter(videoCommand);
+        getServer().getPluginManager().registerEvents(new VideoCenterListener(this), this);
 
         webServer = new WebPlayerServer(this);
         webServer.start();
@@ -61,14 +61,15 @@ public final class VideoPlayerPlugin extends JavaPlugin {
         return getDataFolder().toPath().resolve(name);
     }
 
+    @Override
     public void onDisable() {
         saveLibraries();
         if (webServer != null) webServer.stop();
     }
 
-    public WebPlayerServer getWebServer(){return webServer;}
-    public RoomManager getRooms(){return rooms;}
-    public YouTubeService getYouTube(){return youtube;}
-    public MediaLibrary getMedia(){return media;}
-    public PlaybackQueue getQueue(){return queue;}
+    public WebPlayerServer getWebServer() { return webServer; }
+    public RoomManager getRooms() { return rooms; }
+    public YouTubeService getYouTube() { return youtube; }
+    public MediaLibrary getMedia() { return media; }
+    public PlaybackQueue getQueue() { return queue; }
 }
