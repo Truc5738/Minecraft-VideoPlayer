@@ -1,0 +1,19 @@
+name: Minecraft-VideoPlayer
+version: 1.0.0-SNAPSHOT
+main: dev.minecraftvideoplayer.VideoPlayerPlugin
+api-version: '1.21'
+author: Truc5738
+description: Cross-platform Minecraft video rooms with a web player for Java and Bedrock/PE.
+commands:
+  video:
+    description: Open the Video Center
+    usage: /video
+    aliases: [videos]
+  videoadmin:
+    description: Manage Minecraft-VideoPlayer
+    usage: /videoadmin
+permissions:
+  videoplayer.use:
+    default: true
+  videoplayer.admin:
+    default: op
