@@ -8,6 +8,7 @@ import dev.minecraftvideoplayer.room.RoomManager;
 import dev.minecraftvideoplayer.ui.VideoCenterListener;
 import dev.minecraftvideoplayer.web.WebPlayerServer;
 import dev.minecraftvideoplayer.youtube.YouTubeService;
+import dev.minecraftvideoplayer.screen.GeneratedFrameDecoderFactory;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.nio.file.Path;
@@ -21,6 +22,7 @@ public final class VideoPlayerPlugin extends JavaPlugin {
     private PlaybackQueue queue;
     private dev.minecraftvideoplayer.screen.ScreenManager screens;
     private dev.minecraftvideoplayer.screen.NativeScreenRenderer screenRenderer;
+    private GeneratedFrameDecoderFactory frameDecoderFactory;
 
     @Override
     public void onEnable() {
@@ -31,6 +33,8 @@ public final class VideoPlayerPlugin extends JavaPlugin {
         queue = new PlaybackQueue();
         screens = new dev.minecraftvideoplayer.screen.ScreenManager(this);
         screenRenderer = new dev.minecraftvideoplayer.screen.NativeScreenRenderer(screens);
+        frameDecoderFactory = new GeneratedFrameDecoderFactory();
+        dev.minecraftvideoplayer.screen.DecoderFactory.register(frameDecoderFactory);
         loadLibraries();
 
         VideoCommand videoCommand = new VideoCommand(this);
@@ -79,4 +83,5 @@ public final class VideoPlayerPlugin extends JavaPlugin {
     public PlaybackQueue getQueue() { return queue; }
     public dev.minecraftvideoplayer.screen.ScreenManager getScreens() { return screens; }
     public dev.minecraftvideoplayer.screen.NativeScreenRenderer getScreenRenderer() { return screenRenderer; }
+    public GeneratedFrameDecoderFactory getFrameDecoderFactory() { return frameDecoderFactory; }
 }
