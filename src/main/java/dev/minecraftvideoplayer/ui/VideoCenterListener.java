@@ -54,7 +54,7 @@ public final class VideoCenterListener implements Listener {
                 case 10 -> { screen.setPlaying(true); plugin.getScreens().play(screen.id(), screen.videoId()); player.sendMessage(ChatColor.WHITE + "Screen " + screen.id() + ": Play"); }
                 case 11 -> { plugin.getScreens().pause(screen.id()); player.sendMessage(ChatColor.WHITE + "Screen " + screen.id() + ": Pause"); }
                 case 12 -> { plugin.getScreens().stop(screen.id()); player.sendMessage(ChatColor.WHITE + "Screen " + screen.id() + ": Stop"); }
-                case 13 -> { pendingSource.put(player.getUniqueId(), "screen:" + screen.id()); prompt(player, "Enter a local MP4/MOV file path in chat. Type 'cancel' to stop."); }
+                case 13 -> { pendingSource.put(player.getUniqueId(), "screen:" + screen.id()); prompt(player, "Enter a local MP4/MOV path or direct MP4/MOV URL in chat. Type 'cancel' to stop."); }
                 case 14, 15 -> seek(player, screen.id(), slot == 14 ? -10000L : 10000L);
                 case 22 -> { plugin.getScreens().remove(screen.id()); player.sendMessage(ChatColor.WHITE + "Screen " + screen.id() + " deleted."); VideoCenterMenu.openScreenManager(player, plugin); }
                 case 26 -> VideoCenterMenu.openScreenManager(player, plugin);
@@ -117,8 +117,10 @@ public final class VideoCenterListener implements Listener {
             player.sendMessage(ChatColor.WHITE + "Video input cancelled.");
             return;
         }
-        if (!dev.minecraftvideoplayer.screen.JCodecVideoDecoder.supportsFile(source) || !new File(source).isFile()) {
-            player.sendMessage(ChatColor.WHITE + "Only an existing local MP4/MOV file is supported by the native decoder.");
+        boolean local = dev.minecraftvideoplayer.screen.JCodecVideoDecoder.supportsFile(source) && new File(source).isFile();
+        boolean remote = source.startsWith("http://") || source.startsWith("https://");
+        if (!local && !remote) {
+            player.sendMessage(ChatColor.WHITE + "Use an existing local MP4/MOV file or a direct MP4/MOV URL.");
             return;
         }
 
