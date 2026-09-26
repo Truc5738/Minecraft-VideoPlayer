@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ScreenManager {
     private final Map<String, VideoScreen> screens = new ConcurrentHashMap<>();
     private final Map<String, BukkitTask> playbackTasks = new ConcurrentHashMap<>();
+    private final Map<String, DecoderPlayback> decoders = new ConcurrentHashMap<>();
     private final JavaPlugin plugin;
 
     public ScreenManager(JavaPlugin plugin) {
@@ -48,6 +49,8 @@ public final class ScreenManager {
 
     public void shutdown() {
         playbackTasks.values().forEach(BukkitTask::cancel);
+        decoders.values().forEach(DecoderPlayback::close);
+        decoders.clear();
         playbackTasks.clear();
         
     }
@@ -75,6 +78,21 @@ public final class ScreenManager {
         stopSchedule(id);
         VideoScreen screen = screens.get(id);
         if (screen != null) screen.setPlaying(false);
+    }
+
+    public void attachDecoder(String id, DecoderPlayback playback) {
+        DecoderPlayback previous = decoders.put(id, playback);
+        if (previous != null) previous.close();
+    }
+
+    public void detachDecoder(String id) {
+        DecoderPlayback playback = decoders.remove(id);
+        if (playback != null) playback.close();
+    }
+
+    public void pumpDecoder(String id) {
+        DecoderPlayback playback = decoders.get(id);
+        if (playback != null) playback.pump();
     }
 
     public void stop(String id) {
