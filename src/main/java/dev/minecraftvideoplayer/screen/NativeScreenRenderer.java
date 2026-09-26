@@ -9,13 +9,10 @@ import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.MapMeta;
-import org.bukkit.map.MapCanvas;
-import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 public final class NativeScreenRenderer {
     private final ScreenManager manager;
@@ -68,18 +65,4 @@ public final class NativeScreenRenderer {
         }
     }
 
-    private static final class PreviewRenderer extends MapRenderer {
-        private boolean rendered;
-
-        @Override
-        public void render(MapView view, MapCanvas canvas, Player player) {
-            if (rendered) return;
-            rendered = true;
-            for (int x = 0; x < 128; x++) {
-                for (int y = 0; y < 128; y++) {
-                    canvas.setPixel(x, y, (byte) ((x / 16 + y / 16) % 2 == 0 ? 34 : 119));
-                }
-            }
-        }
-    }
 }
