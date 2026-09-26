@@ -10,22 +10,21 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.map.MapView;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class NativeScreenRenderer {
     private final ScreenManager manager;
-    private final java.util.Map<String, VideoFrameRenderer> renderers = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, VideoFrameRenderer> renderers = new ConcurrentHashMap<>();
 
-    public NativeScreenRenderer(ScreenManager manager) {
-        this.manager = manager;
-    }
+    public NativeScreenRenderer(ScreenManager manager) { this.manager = manager; }
 
     public void renderPreview(Player player, VideoScreen screen) {
+        removeRendererState(screen.id());
         Location origin = screen.origin().clone();
         List<ItemFrame> frames = new ArrayList<>();
-
         for (int y = 0; y < screen.height(); y++) {
             for (int x = 0; x < screen.width(); x++) {
                 Location location = origin.clone().add(x, screen.height() - 1 - y, 0);
@@ -37,10 +36,11 @@ public final class NativeScreenRenderer {
                 MapView map = Bukkit.createMap(location.getWorld());
                 map.setTrackingPosition(false);
                 map.setUnlimitedTracking(false);
-                map.setScale(org.bukkit.map.MapView.Scale.CLOSE);
+                map.setScale(MapView.Scale.CLOSE);
                 map.getRenderers().forEach(map::removeRenderer);
-                VideoFrameRenderer renderer = new VideoFrameRenderer();
-                renderers.put(screen.id() + ":" + x + ":" + y, renderer);
+
+                VideoFrameRenderer renderer = new VideoFrameRenderer(x, y, screen.width(), screen.height());
+                renderers.put(key(screen.id(), x, y), renderer);
                 map.addRenderer(renderer);
 
                 ItemStack item = new ItemStack(Material.FILLED_MAP);
@@ -51,18 +51,36 @@ public final class NativeScreenRenderer {
                 frames.add(frame);
             }
         }
-
-        screen.setFrameIds(frames.stream().map(e -> e.getUniqueId()).toList());
-        player.sendMessage(ChatColor.WHITE + "Native screen preview created: " + screen.id());
+        screen.setFrameIds(frames.stream().map(ItemFrame::getUniqueId).toList());
+        player.sendMessage(ChatColor.WHITE + "Native screen created: " + screen.id());
     }
 
     public void pushFrame(VideoScreen screen, VideoFrame frame) {
-        for (int y = 0; y < screen.height(); y++) {
+        for (int y = 0; y < screen.height(); y++)
             for (int x = 0; x < screen.width(); x++) {
-                VideoFrameRenderer renderer = renderers.get(screen.id() + ":" + x + ":" + y);
+                VideoFrameRenderer renderer = renderers.get(key(screen.id(), x, y));
                 if (renderer != null) renderer.setFrame(frame);
             }
-        }
     }
 
+    public void removeScreen(VideoScreen screen) {
+        if (screen == null) return;
+        removeRendererState(screen.id());
+        if (screen.world() != null)
+            for (java.util.UUID id : screen.frameIds()) {
+                var entity = screen.world().getEntity(id);
+                if (entity != null) entity.remove();
+            }
+        screen.setFrameIds(List.of());
+    }
+
+    public void removeRendererState(String screenId) {
+        renderers.keySet().removeIf(k -> k.startsWith(screenId + ":"));
+    }
+
+    public void clear() {
+        for (VideoScreen screen : manager.all().values()) removeScreen(screen);
+    }
+
+    private String key(String id, int x, int y) { return id + ":" + x + ":" + y; }
 }
