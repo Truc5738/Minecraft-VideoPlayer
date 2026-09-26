@@ -99,6 +99,10 @@ public final class ScreenManager {
         if (playback != null) playback.close();
     }
 
+    public DecoderPlayback decoder(String id) {
+        return decoders.get(id);
+    }
+
     public void pumpDecoder(String id) {
         DecoderPlayback playback = decoders.get(id);
         if (playback != null) playback.pump();
@@ -109,6 +113,13 @@ public final class ScreenManager {
         detachDecoder(id);
         VideoScreen screen = screens.get(id);
         if (screen != null) {
+            if (screen.world() != null) {
+                for (UUID frameId : screen.frameIds()) {
+                    var entity = screen.world().getEntity(frameId);
+                    if (entity != null) entity.remove();
+                }
+            }
+            screen.setFrameIds(java.util.List.of());
             screen.setPlaying(false);
             screen.setVideo("");
         }
