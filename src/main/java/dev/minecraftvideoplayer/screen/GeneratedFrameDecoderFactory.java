@@ -67,12 +67,17 @@ public final class GeneratedFrameDecoderFactory implements VideoDecoderFactory {
                 .GET()
                 .build();
 
-            HttpResponse<Path> response = http.send(
-                request,
-                HttpResponse.BodyHandlers.ofFile(
-                    Files.createTempFile("minecraft-videoplayer-", path.endsWith(".mov") ? ".mov" : ".mp4")
-                )
+            Path downloadTarget = Files.createTempFile(
+                "minecraft-videoplayer-", path.endsWith(".mov") ? ".mov" : ".mp4"
             );
+            HttpResponse<Path> response;
+            try {
+                response = http.send(request, HttpResponse.BodyHandlers.ofFile(downloadTarget));
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                Files.deleteIfExists(downloadTarget);
+                throw new IOException("Video download interrupted.", ex);
+            }
 
             if (response.statusCode() / 100 != 2) {
                 Files.deleteIfExists(response.body());
