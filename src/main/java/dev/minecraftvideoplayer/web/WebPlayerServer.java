@@ -155,7 +155,7 @@ public final class WebPlayerServer {
         return value == null || value.isBlank() ? "web-" + ctx.ip() : value.substring(0, Math.min(80, value.length()));
     }
 
-    private MediaLibrary.Item item(Map<?, ?> body, String id) {
+    private String value(Map<?, ?> map, String key, String fallback) {\n        Object value = map.get(key);\n        return value == null ? fallback : String.valueOf(value);\n    }\n\n    private MediaLibrary.Item item(Map<?, ?> body, String id) {
         return new MediaLibrary.Item(id,
             String.valueOf(body.getOrDefault("title", id)),
             String.valueOf(body.getOrDefault("channel", "")));
