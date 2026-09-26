@@ -5,6 +5,7 @@ server:
 
 youtube:
   enabled: true
+  api-keys: []
   api-key: ""
   max-results: 10
 
