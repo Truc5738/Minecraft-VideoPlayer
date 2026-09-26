@@ -1,5 +1,6 @@
 package dev.minecraftvideoplayer.screen;
 
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -58,6 +59,10 @@ public final class ScreenManager {
         VideoScreen screen = screens.get(id);
         if (screen == null) return;
         screen.setVideo(videoId);
+        if (renderer != null && screen.frameIds().isEmpty()) {
+            Player owner = Bukkit.getPlayer(screen.owner());
+            if (owner != null) renderer.renderPreview(owner, screen);
+        }
         screen.setPlaying(true);
         if (decoders.containsKey(id)) schedule(id, () -> pumpDecoder(id), 40);
     }
@@ -84,11 +89,12 @@ public final class ScreenManager {
     }
     public void stop(String id) {
         stopSchedule(id);
-        detachDecoder(id);
         VideoScreen screen = screens.get(id);
+        DecoderPlayback playback = decoders.get(id);
+        if (playback != null) {
+            try { playback.seek(0L); } catch (Exception ignored) { }
+        }
         if (screen != null) {
-            if (renderer != null) renderer.removeScreen(screen);
-            screen.setFrameIds(java.util.List.of());
             screen.setPlaying(false);
             screen.setVideo("");
         }
