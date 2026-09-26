@@ -2,7 +2,7 @@ package dev.minecraftvideoplayer.screen;
 
 import org.jcodec.api.FrameGrab;
 import org.jcodec.api.JCodecException;
-import org.jcodec.api.awt.AWTUtil;
+import org.jcodec.scale.AWTUtil;
 import org.jcodec.common.io.NIOUtils;
 import org.jcodec.common.io.SeekableByteChannel;
 import org.jcodec.common.model.Picture;
