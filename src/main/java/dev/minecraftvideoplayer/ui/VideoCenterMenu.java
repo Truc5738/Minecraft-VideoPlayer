@@ -13,6 +13,8 @@ import java.util.List;
 
 public final class VideoCenterMenu {
     public static final String TITLE = "Video Center";
+    public static final String SCREEN_TITLE = "Screen Manager";
+    public static final String SCREEN_CONTROL_TITLE = "Screen Control";
 
     private VideoCenterMenu() {}
 
@@ -44,6 +46,40 @@ public final class VideoCenterMenu {
         set(inv, 16, Material.REDSTONE, "/video reload", "Reload configuration. Admin only.");
         set(inv, 22, Material.BOOK, "Controls", "Host controls affect synchronized room playback.");
         set(inv, 26, Material.BARRIER, "Close", "Close this menu.");
+        player.openInventory(inv);
+    }
+
+    public static void openScreenManager(Player player, VideoPlayerPlugin plugin) {
+        Inventory inv = Bukkit.createInventory(null, 54, SCREEN_TITLE);
+        var screens = plugin.getScreens().all().values().stream()
+                .filter(s -> s.owner().equals(player.getUniqueId()))
+                .toList();
+        for (int i = 0; i < Math.min(45, screens.size()); i++) {
+            var s = screens.get(i);
+            String state = s.playing() ? "Playing" : (s.videoId().isBlank() ? "Idle" : "Paused");
+            set(inv, i, Material.FILLED_MAP, "Screen " + s.id(), state, s.width() + "x" + s.height(), "Click to control");
+        }
+        set(inv, 49, Material.PAINTING, "Create Screen", "Create a new screen at your location.");
+        set(inv, 50, Material.BARRIER, "Close", "Close this menu.");
+        player.openInventory(inv);
+    }
+
+    public static void openScreenControl(Player player, VideoPlayerPlugin plugin, String screenId) {
+        var screen = plugin.getScreens().get(screenId);
+        if (screen == null || !screen.owner().equals(player.getUniqueId())) {
+            player.sendMessage(ChatColor.WHITE + "Screen not found or not owned by you.");
+            openScreenManager(player, plugin);
+            return;
+        }
+        Inventory inv = Bukkit.createInventory(null, 27, SCREEN_CONTROL_TITLE + " " + screen.id());
+        set(inv, 10, Material.LIME_DYE, "Play", "Start or resume playback.");
+        set(inv, 11, Material.YELLOW_DYE, "Pause", "Pause playback.");
+        set(inv, 12, Material.RED_DYE, "Stop", "Stop and detach decoder.");
+        set(inv, 14, Material.SPECTRAL_ARROW, "Seek -10s", "Seek backward 10 seconds.");
+        set(inv, 15, Material.ARROW, "Seek +10s", "Seek forward 10 seconds.");
+        set(inv, 16, Material.FILLED_MAP, "Screen Info", "ID: " + screen.id(), "State: " + (screen.playing() ? "Playing" : "Paused"));
+        set(inv, 22, Material.BARRIER, "Delete Screen", "Remove this screen.");
+        set(inv, 26, Material.PAINTING, "Back", "Return to Screen Manager.");
         player.openInventory(inv);
     }
 
