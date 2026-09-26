@@ -37,6 +37,28 @@ public final class WebPlayerServer {
             .post("/api/admin/reload", ctx -> { if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; } plugin.reloadConfig(); ctx.json(Map.of("ok",true)); })
             .delete("/api/admin/room/{id}", ctx -> { if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; } ctx.json(Map.of("ok",plugin.getRooms().close(ctx.pathParam("id")) > 0)); })
             .get("/api/health", ctx -> ctx.json(Map.of("status","ok","plugin","Minecraft-VideoPlayer","minecraft","1.26")))
+            .post("/api/native/frame/{screenId}", ctx -> {
+                if (!adminAllowed(ctx)) {
+                    ctx.status(401).json(Map.of("error", "Unauthorized"));
+                    return;
+                }
+                String screenId = ctx.pathParam("screenId");
+                long timestamp = 0L;
+                try {
+                    String header = ctx.header("X-Frame-Timestamp");
+                    if (header != null && !header.isBlank()) timestamp = Long.parseLong(header);
+                } catch (NumberFormatException ignored) {}
+                try {
+                    boolean accepted = plugin.getFrameBridge().submit(screenId, ctx.bodyAsBytes(), timestamp);
+                    if (!accepted) {
+                        ctx.status(404).json(Map.of("error", "Screen not found"));
+                        return;
+                    }
+                    ctx.json(Map.of("ok", true, "screen", screenId, "format", ctx.contentType() == null ? "binary" : ctx.contentType()));
+                } catch (Exception e) {
+                    ctx.status(400).json(Map.of("error", String.valueOf(e.getMessage())));
+                }
+            })
             .get("/api/search", ctx -> { try { String q=Optional.ofNullable(ctx.queryParam("q")).orElse("").trim(); if(q.isBlank()){ctx.json(Map.of("items",List.of()));return;} ctx.json(Map.of("items",plugin.getYouTube().search(q))); } catch(Exception e){ctx.status(500).json(Map.of("error",String.valueOf(e.getMessage())));} })
             .get("/api/room/new", ctx -> { WatchRoom r=plugin.getRooms().create(owner(ctx)); ctx.json(Map.of("room",r.id(),"host",r.host())); })
             .get("/api/room/{id}", ctx -> { WatchRoom r=plugin.getRooms().get(ctx.pathParam("id")); if(r==null){ctx.status(404).json(Map.of("error","Room not found"));return;} ctx.json(Map.of("room",r.id(),"host",r.host(),"video",r.videoId(),"title",r.title(),"time",r.time(),"playing",r.playing(),"viewers",r.viewers())); })
