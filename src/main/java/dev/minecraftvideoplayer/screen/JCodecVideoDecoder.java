@@ -57,28 +57,24 @@ public final class JCodecVideoDecoder implements VideoDecoder {
     public VideoFrame nextFrame() throws IOException {
         if (!isOpen()) return null;
 
-        try {
-            Picture picture = grab.getNativeFrame();
-            if (picture == null) {
-                return null;
-            }
-
-            BufferedImage image = AWTUtil.toBufferedImage(picture);
-            int width = image.getWidth();
-            int height = image.getHeight();
-            int[] rgb = new int[width * height];
-            image.getRGB(0, 0, width, height, rgb, 0, width);
-
-            // JCodec does not expose a stable frame timestamp through the generic
-            // FrameGrab API used here, so advance by one frame at a conservative
-            // default of 25 FPS. The renderer can still consume every decoded frame.
-            long timestamp = positionMs;
-            positionMs += 40L;
-
-            return new VideoFrame(width, height, rgb, timestamp);
-        } catch (JCodecException ex) {
-            throw new IOException("JCodec failed while decoding frame", ex);
+        Picture picture = grab.getNativeFrame();
+        if (picture == null) {
+            return null;
         }
+
+        BufferedImage image = AWTUtil.toBufferedImage(picture);
+        int width = image.getWidth();
+        int height = image.getHeight();
+        int[] rgb = new int[width * height];
+        image.getRGB(0, 0, width, height, rgb, 0, width);
+
+        // JCodec does not expose a stable frame timestamp through the generic
+        // FrameGrab API used here, so advance by one frame at a conservative
+        // default of 25 FPS. The renderer can still consume every decoded frame.
+        long timestamp = positionMs;
+        positionMs += 40L;
+
+        return new VideoFrame(width, height, rgb, timestamp);
     }
 
     @Override
@@ -86,8 +82,12 @@ public final class JCodecVideoDecoder implements VideoDecoder {
         if (!isOpen()) return;
 
         long target = Math.max(0L, positionMs);
-        grab.seekToSecondPrecise(target / 1000.0);
-        this.positionMs = target;
+        try {
+            grab.seekToSecondPrecise(target / 1000.0);
+            this.positionMs = target;
+        } catch (JCodecException ex) {
+            throw new IOException("JCodec seek failed", ex);
+        }
     }
 
     @Override
