@@ -15,6 +15,7 @@ public final class WebPlayerServer {
     private final VideoPlayerPlugin plugin;
     private final Map<String, Set<io.javalin.websocket.WsContext>> sockets = new ConcurrentHashMap<>();
     private final Map<io.javalin.websocket.WsContext, String> socketOwners = new ConcurrentHashMap<>();
+    private final Map<io.javalin.websocket.WsContext, String> socketOwners = new ConcurrentHashMap<>();
     private final ObjectMapper json = new ObjectMapper();
     private Javalin app;
 
@@ -164,93 +165,82 @@ public final class WebPlayerServer {
     private void configureSocket(WsConfig ws) {
         ws.onConnect(c -> c.send(json.writeValueAsString(Map.of("type","connected"))));
         ws.onClose(c -> {
-            sockets.values().forEach(v -> v.remove(c));
             socketOwners.remove(c);
+            sockets.values().forEach(v -> v.remove(c));
         });
         ws.onMessage(c -> {
             try {
-                Map<?,?> m=json.readValue(c.message(),Map.class);
-                String type=value(m,"type","");
-                String roomId=value(m,"room","");
-                String sender=value(m,"owner","");
-                if(roomId.isBlank()){sendError(c,"Room required");return;}
-                if(sender.isBlank()){sendError(c,"Owner required");return;}
+                Map<?, ?> m = json.readValue(c.message(), Map.class);
+                String type = value(m, "type", "");
+                String roomId = value(m, "room", "");
+                if (roomId.isBlank()) { c.send(json.writeValueAsString(Map.of("type","error","message","Room required"))); return; }
 
-                WatchRoom r=plugin.getRooms().get(roomId);
-                if(r==null){sendError(c,"Room not found");return;}
+                WatchRoom r = plugin.getRooms().get(roomId);
+                if (r == null) { c.send(json.writeValueAsString(Map.of("type","error","message","Room not found"))); return; }
 
-                socketOwners.put(c,sender);
-                sockets.computeIfAbsent(roomId,k->ConcurrentHashMap.newKeySet()).add(c);
-                r.join(sender);
+                String ownerId = value(m, "owner", "");
+                if (ownerId.isBlank()) ownerId = "web-socket-" + c.hashCode();
+                ownerId = ownerId.substring(0, Math.min(80, ownerId.length()));
+                socketOwners.put(c, ownerId);
+                r.join(ownerId);
+                sockets.computeIfAbsent(roomId, k -> ConcurrentHashMap.newKeySet()).add(c);
 
                 c.send(json.writeValueAsString(Map.of(
-                    "type","room-state","room",roomId,"host",r.host(),"video",r.videoId(),
-                    "title",r.title(),"time",r.time(),"playing",r.playing(),
+                    "type","room-state","room",roomId,"host",r.host(),"isHost",r.host().equals(ownerId),
+                    "video",r.videoId(),"title",r.title(),"time",r.time(),"playing",r.playing(),
                     "updatedAt",r.updatedAt(),"viewers",r.viewers()
                 )));
 
-                if(type.equals("join")) return;
+                if (type.equals("join")) return;
 
-                if(!sender.equals(r.host())){
-                    if(type.equals("state")||type.equals("play")||type.equals("pause")||type.equals("seek")||type.equals("next")||type.equals("previous")){
-                        sendError(c,"Only the room host can control playback");
-                        return;
-                    }
+                if (!r.host().equals(ownerId)) {
+                    c.send(json.writeValueAsString(Map.of("type","error","message","Host control only")));
                     return;
                 }
 
-                switch(type){
-                    case "state" -> {
-                        String video=value(m,"video","");
-                        double time=Double.parseDouble(value(m,"time","0"));
-                        boolean playing=Boolean.parseBoolean(value(m,"playing","false"));
-                        if(!video.isBlank()) r.setVideo(video,value(m,"title",video));
-                        r.state(time,playing);
+                if (type.equals("state")) {
+                    String video = value(m, "video", r.videoId());
+                    r.setVideo(video, value(m, "title", video));
+                    r.state(currentTime(m, r.time()), Boolean.parseBoolean(value(m, "playing", "false")));
+                } else if (type.equals("play")) {
+                    r.state(currentTime(m, r.time()), true);
+                } else if (type.equals("pause")) {
+                    r.state(currentTime(m, r.time()), false);
+                } else if (type.equals("stop")) {
+                    r.state(0, false);
+                } else if (type.equals("seek")) {
+                    r.state(currentTime(m, r.time()), r.playing());
+                } else if (type.equals("next") || type.equals("previous")) {
+                    PlaybackQueue.Entry e = type.equals("next")
+                        ? plugin.getQueue().next(ownerId)
+                        : plugin.getQueue().previous(ownerId);
+                    if (e == null) {
+                        c.send(json.writeValueAsString(Map.of("type","error","message","No queue item")));
+                        return;
                     }
-                    case "play" -> r.state(r.time(),true);
-                    case "pause" -> r.state(r.time(),false);
-                    case "seek" -> {
-                        double time=Double.parseDouble(value(m,"time","0"));
-                        r.state(time,r.playing());
-                    }
-                    case "next","previous" -> {
-                        var entry=type.equals("next")?plugin.getQueue().next(sender):plugin.getQueue().previous(sender);
-                        if(entry==null){sendError(c,"No "+type+" video");return;}
-                        r.setVideo(entry.id(),entry.title());
-                        r.state(0,true);
-                    }
-                    default -> { return; }
+                    r.setVideo(e.id(), e.title());
+                    r.state(0, true);
+                } else {
+                    return;
                 }
 
-                broadcast(roomId,Map.of(
-                    "type","state","room",roomId,"host",r.host(),"video",r.videoId(),
-                    "title",r.title(),"time",r.time(),"playing",r.playing(),"updatedAt",r.updatedAt(),
-                    "viewers",r.viewers()
-                ),c);
-            } catch(Exception e) {
-                sendError(c,"Invalid message");
+                broadcastState(roomId, r);
+            } catch (Exception e) {
+                try { c.send(json.writeValueAsString(Map.of("type","error","message","Invalid message"))); } catch (Exception ignored) {}
             }
         });
     }
 
-    private void sendError(io.javalin.websocket.WsContext c,String message){
-        try{c.send(json.writeValueAsString(Map.of("type","error","message",message)));}catch(Exception ignored){}
+    private double currentTime(Map<?, ?> m, double fallback) {
+        try { return Math.max(0, Double.parseDouble(value(m, "time", String.valueOf(fallback)))); }
+        catch (NumberFormatException ignored) { return Math.max(0, fallback); }
     }
 
-    private void broadcast(String room,Map<String,Object> msg,io.javalin.websocket.WsContext except){
-        try{
-            String s=json.writeValueAsString(msg);
-            for(var c:sockets.getOrDefault(room,Set.of())){
-                if(c!=except&&c.session.isOpen())c.send(s);
-            }
-        }catch(Exception ignored){}
+    private void broadcastState(String roomId, WatchRoom r) {
+        broadcast(roomId, Map.of(
+            "type","room-state","room",roomId,"host",r.host(),
+            "video",r.videoId(),"title",r.title(),"time",r.time(),"playing",r.playing(),
+            "updatedAt",r.updatedAt(),"viewers",r.viewers()
+        ));
     }
-
-    public String getPublicUrl(org.bukkit.entity.Player p){
-        String u=plugin.getConfig().getString("server.public-url","");
-        if(u!=null&&!u.isBlank())return u.replaceAll("/$","")+"/player";
-        return "http://127.0.0.1:"+plugin.getConfig().getInt("server.web-port",26467)+"/player";
-    }
-    public String getStatus(){return app==null?"OFFLINE":"ONLINE";}
-    public void stop(){if(app!=null)app.stop();}
 }
