@@ -29,7 +29,7 @@ public final class VideoPlayerPlugin extends JavaPlugin {
         youtube = new YouTubeService(this);
         media = new MediaLibrary();
         queue = new PlaybackQueue();
-        screens = new dev.minecraftvideoplayer.screen.ScreenManager();
+        screens = new dev.minecraftvideoplayer.screen.ScreenManager(this);
         screenRenderer = new dev.minecraftvideoplayer.screen.NativeScreenRenderer(screens);
         loadLibraries();
 
