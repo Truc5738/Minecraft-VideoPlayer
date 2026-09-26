@@ -1,11 +1,12 @@
 package dev.minecraftvideoplayer.screen;
 
+import org.bukkit.entity.Player;
 import org.bukkit.map.MapCanvas;
+import org.bukkit.map.MapPalette;
 import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
-import org.bukkit.map.MapPalette;
+
 import java.awt.Color;
-import org.bukkit.entity.Player;
 
 public final class VideoFrameRenderer extends MapRenderer {
     private volatile VideoFrame frame;
@@ -25,13 +26,13 @@ public final class VideoFrameRenderer extends MapRenderer {
 
         int width = current.width();
         int height = current.height();
+        int[] rgb = current.rgb();
 
         for (int y = 0; y < 128; y++) {
-            int sourceY = y * height / 128;
+            int sourceY = Math.min(height - 1, y * height / 128);
             for (int x = 0; x < 128; x++) {
-                int sourceX = x * width / 128;
-                int rgb = current.rgb(sourceX, sourceY);
-                canvas.setPixel(x, y, toMapColor(rgb));
+                int sourceX = Math.min(width - 1, x * width / 128);
+                canvas.setPixel(x, y, toMapColor(rgb[sourceY * width + sourceX]));
             }
         }
     }
@@ -40,7 +41,6 @@ public final class VideoFrameRenderer extends MapRenderer {
         int r = (rgb >> 16) & 0xff;
         int g = (rgb >> 8) & 0xff;
         int b = rgb & 0xff;
-
         return MapPalette.matchColor(new Color(r, g, b));
     }
 }
