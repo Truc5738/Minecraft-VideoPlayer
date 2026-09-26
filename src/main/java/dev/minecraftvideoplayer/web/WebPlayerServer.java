@@ -15,7 +15,6 @@ public final class WebPlayerServer {
     private final VideoPlayerPlugin plugin;
     private final Map<String, Set<io.javalin.websocket.WsContext>> sockets = new ConcurrentHashMap<>();
     private final Map<io.javalin.websocket.WsContext, String> socketOwners = new ConcurrentHashMap<>();
-    private final Map<io.javalin.websocket.WsContext, String> socketOwners = new ConcurrentHashMap<>();
     private final ObjectMapper json = new ObjectMapper();
     private Javalin app;
 
