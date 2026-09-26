@@ -23,6 +23,6 @@ public final class VideoFrame {
 
     public int width() { return width; }
     public int height() { return height; }
-    public int[] rgb() { return Arrays.copyOf(rgb, rgb.length); }
+    public int[] rgb() { return rgb; }
     public long timestampMs() { return timestampMs; }
 }
