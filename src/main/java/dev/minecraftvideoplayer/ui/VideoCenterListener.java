@@ -117,6 +117,12 @@ public final class VideoCenterListener implements Listener {
             player.sendMessage(ChatColor.WHITE + "Video input cancelled.");
             return;
         }
+        String youtubeId = YouTubeService.extractVideoId(source);
+        if (!youtubeId.isBlank()) {
+            player.sendMessage(ChatColor.WHITE + "YouTube video detected: " + youtubeId);
+            player.sendMessage(ChatColor.WHITE + "YouTube native playback needs a media extractor/decoder bridge. The Data API alone does not provide a raw video stream.");
+            return;
+        }
         boolean local = dev.minecraftvideoplayer.screen.JCodecVideoDecoder.supportsFile(source) && new File(source).isFile();
         boolean remote = source.startsWith("http://") || source.startsWith("https://");
         if (!local && !remote) {
