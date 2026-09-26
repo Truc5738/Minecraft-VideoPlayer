@@ -1,10 +1,9 @@
-name: Build
+name: Build Minecraft-VideoPlayer
 
 on:
   push:
-    branches: ["main"]
+    branches: ["**"]
   pull_request:
-    branches: ["main"]
   workflow_dispatch:
 
 jobs:
@@ -12,13 +11,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
           cache: maven
       - name: Build
-        run: mvn -B clean package
+        run: mvn -B -U clean package
       - name: Upload plugin JAR
         uses: actions/upload-artifact@v4
         with:
