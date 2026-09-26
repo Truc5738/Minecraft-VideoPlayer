@@ -1,27 +1,12 @@
 package dev.minecraftvideoplayer.command;
-
-import dev.minecraftvideoplayer.VideoPlayerPlugin;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-
-public final class VideoCommand implements CommandExecutor {
-    private final VideoPlayerPlugin plugin;
-    public VideoCommand(VideoPlayerPlugin plugin) { this.plugin = plugin; }
-
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage("This command is for players.");
-            return true;
-        }
-        if (!player.hasPermission("videoplayer.use")) {
-            player.sendMessage("You do not have permission.");
-            return true;
-        }
-        String url = plugin.getWebServer().getPublicUrl(player);
-        player.sendMessage("Video Center: " + url);
-        return true;
-    }
+import dev.minecraftvideoplayer.VideoPlayerPlugin; import dev.minecraftvideoplayer.room.WatchRoom; import dev.minecraftvideoplayer.youtube.YouTubeService; import org.bukkit.command.*; import org.bukkit.entity.Player; import java.util.*;
+public final class VideoCommand implements CommandExecutor,TabCompleter{
+ private final VideoPlayerPlugin plugin; public VideoCommand(VideoPlayerPlugin p){plugin=p;}
+ public boolean onCommand(CommandSender s,Command c,String l,String[] a){if(!(s instanceof Player p)){s.sendMessage("Players only.");return true;}if(!p.hasPermission("videoplayer.use")){p.sendMessage("You do not have permission.");return true;}
+  if(a.length==0){p.sendMessage("Video Center: "+plugin.getWebServer().getPublicUrl(p));return true;}
+  switch(a[0].toLowerCase()){case "play"->{if(a.length<2){p.sendMessage("/video play <YouTube URL>");return true;}String id=YouTubeService.extractVideoId(a[1]);if(id.isBlank()){p.sendMessage("Invalid YouTube URL.");return true;}p.sendMessage(plugin.getWebServer().getPublicUrl(p)+"?video="+id);}
+  case "search"->{if(a.length<2){p.sendMessage("/video search <query>");return true;}try{var r=plugin.getYouTube().search(String.join(" ",Arrays.copyOfRange(a,1,a.length)));for(var v:r)p.sendMessage(v.id()+" | "+v.title()+" | "+v.channel());}catch(Exception e){p.sendMessage("YouTube search failed: "+e.getMessage());}}
+  case "room"->{if(a.length>=2&&a[1].equalsIgnoreCase("create")){WatchRoom r=plugin.getRooms().create(p.getName());p.sendMessage("Room created: "+r.id());p.sendMessage(plugin.getWebServer().getPublicUrl(p)+"?room="+r.id());}else p.sendMessage("/video room create");}
+  default->p.sendMessage("/video | /video play <url> | /video search <query> | /video room create");}return true;}
+ public List<String> onTabComplete(CommandSender s,Command c,String a,String[] x){if(x.length==1)return List.of("play","search","room");if(x.length==2&&x[0].equalsIgnoreCase("room"))return List.of("create");return List.of();}
 }
