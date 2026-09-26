@@ -63,7 +63,7 @@ function playMedia(id,autoplay=true){currentVideo=id;currentType='youtube';creat
 function playInput(){let raw=document.getElementById('url').value.trim(),id=idOf(raw);if(id){playMedia(id,true);return}if(/^https?:\/\//i.test(raw)){currentType='native';currentVideo=raw;frame.innerHTML='<video id="nativeVideo" controls autoplay></video>';let v=document.getElementById('nativeVideo');v.src=raw;statusEl.textContent='Direct media';return}statusEl.textContent='Invalid video URL or ID.'}
 function playVideo(){if(room){sendControl('play');return}if(yt)yt.playVideo();else{let v=document.getElementById('nativeVideo');if(v)v.play()}}
 function pauseVideo(){if(room){sendControl('pause');return}if(yt)yt.pauseVideo();else{let v=document.getElementById('nativeVideo');if(v)v.pause()}}
-function stopVideo(){if(room){sendControl('pause');if(yt)yt.seekTo(0,true);else{let v=document.getElementById('nativeVideo');if(v)v.currentTime=0}return}if(yt)yt.stopVideo();else{let v=document.getElementById('nativeVideo');if(v){v.pause();v.currentTime=0}}}
+function stopVideo(){if(room){let t=0;sendControl('seek',{time:t});sendControl('pause');if(yt)yt.seekTo(0,true);else{let v=document.getElementById('nativeVideo');if(v)v.currentTime=0}return}if(yt)yt.stopVideo();else{let v=document.getElementById('nativeVideo');if(v){v.pause();v.currentTime=0}}}
 function seek(d){let t=yt?Math.max(0,yt.getCurrentTime()+d):Math.max(0,(document.getElementById('nativeVideo')?.currentTime||0)+d);if(room){sendControl('seek',{time:t});return}if(yt)yt.seekTo(t,true);else{let v=document.getElementById('nativeVideo');if(v)v.currentTime=t}}
 function setVolume(v){if(yt)yt.setVolume(+v);else{let e=document.getElementById('nativeVideo');if(e)e.volume=+v/100}}
 function fullscreen(){frame.requestFullscreen?.()}
