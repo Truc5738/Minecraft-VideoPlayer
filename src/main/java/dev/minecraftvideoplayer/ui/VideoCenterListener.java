@@ -40,7 +40,7 @@ public final class VideoCenterListener implements Listener {
             case 15 -> player.sendMessage(ChatColor.WHITE + "History is stored per player.");
             case 16 -> player.sendMessage(ChatColor.WHITE + "Watch Room: room creation and joining are managed here.");
             case 19 -> player.sendMessage(ChatColor.WHITE + "Host Control: playback control is restricted to the room host.");
-            case 20 -> { player.closeInventory(); player.sendMessage(ChatColor.WHITE + "Screen Manager"); player.sendMessage(ChatColor.WHITE + "Creating a screen at your current location..."); var screen = plugin.getScreens().create(player, 8, 4); player.sendMessage(ChatColor.WHITE + "Screen created: " + screen.id() + " (" + screen.width() + "x" + screen.height() + ")."); }
+            case 20 -> { player.closeInventory(); player.sendMessage(ChatColor.WHITE + "Screen Manager"); player.sendMessage(ChatColor.WHITE + "Creating a screen at your current location..."); var screen = plugin.getScreens().create(player, 8, 4); plugin.getScreenRenderer().renderPreview(player, screen); player.sendMessage(ChatColor.WHITE + "Screen created: " + screen.id() + " (" + screen.width() + "x" + screen.height() + ")."); }
             case 21 -> player.sendMessage(ChatColor.WHITE + "Player Settings: volume, autoplay, repeat and shuffle.");
             case 22 -> player.sendMessage(ChatColor.WHITE + "Settings are loaded from config.yml.");
             case 23 -> {
