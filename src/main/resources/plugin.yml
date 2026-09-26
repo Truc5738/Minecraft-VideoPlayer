@@ -1,7 +1,7 @@
 name: Minecraft-VideoPlayer
 version: 1.0.0
 main: dev.minecraftvideoplayer.VideoPlayerPlugin
-api-version: '1.26'
+api-version: '26.2'
 author: Truc5738
 description: Cross-platform Minecraft video rooms with a web player for Java and Bedrock/PE.
 commands:
