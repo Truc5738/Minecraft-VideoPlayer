@@ -65,7 +65,7 @@ public final class WebPlayerServer {
             .post("/api/favorite", ctx -> {
                 String owner = owner(ctx);
                 Map<?, ?> body = json.readValue(ctx.body(), Map.class);
-                String id = String.valueOf(body.getOrDefault("id", ""));
+                String id = value(body, "id", "");
                 if (id.isBlank()) { ctx.status(400).json(Map.of("error", "Video id required")); return; }
                 plugin.getMedia().favorite(owner, item(body, id));
                 ctx.json(Map.of("ok", true));
@@ -76,14 +76,14 @@ public final class WebPlayerServer {
             })
             .post("/api/history", ctx -> {
                 Map<?, ?> body = json.readValue(ctx.body(), Map.class);
-                String id = String.valueOf(body.getOrDefault("id", ""));
+                String id = value(body, "id", "");
                 if (id.isBlank()) { ctx.status(400).json(Map.of("error", "Video id required")); return; }
                 plugin.getMedia().history(owner(ctx), item(body, id));
                 ctx.json(Map.of("ok", true));
             })
             .post("/api/playlist", ctx -> {
                 Map<?, ?> body = json.readValue(ctx.body(), Map.class);
-                String name = String.valueOf(body.getOrDefault("name", "")).trim();
+                String name = value(body, "name", "").trim();
                 if (name.isBlank()) { ctx.status(400).json(Map.of("error", "Playlist name required")); return; }
                 plugin.getMedia().create(owner(ctx), name);
                 ctx.json(Map.of("ok", true));
@@ -94,7 +94,7 @@ public final class WebPlayerServer {
             })
             .post("/api/playlist/{name}", ctx -> {
                 Map<?, ?> body = json.readValue(ctx.body(), Map.class);
-                String id = String.valueOf(body.getOrDefault("id", ""));
+                String id = value(body, "id", "");
                 if (id.isBlank()) { ctx.status(400).json(Map.of("error", "Video id required")); return; }
                 plugin.getMedia().add(owner(ctx), ctx.pathParam("name"), item(body, id));
                 ctx.json(Map.of("ok", true));
@@ -109,7 +109,7 @@ public final class WebPlayerServer {
             })
             .post("/api/queue", ctx -> {
                 Map<?, ?> body = json.readValue(ctx.body(), Map.class);
-                String id = String.valueOf(body.getOrDefault("id", ""));
+                String id = value(body, "id", "");
                 if (id.isBlank()) { ctx.status(400).json(Map.of("error", "Video id required")); return; }
                 plugin.getQueue().add(owner(ctx), queueItem(body, id));
                 ctx.json(Map.of("ok", true, "queue", plugin.getQueue().get(owner(ctx))));
@@ -157,14 +157,14 @@ public final class WebPlayerServer {
 
     private String value(Map<?, ?> map, String key, String fallback) {\n        Object value = map.get(key);\n        return value == null ? fallback : String.valueOf(value);\n    }\n\n    private MediaLibrary.Item item(Map<?, ?> body, String id) {
         return new MediaLibrary.Item(id,
-            String.valueOf(body.getOrDefault("title", id)),
-            String.valueOf(body.getOrDefault("channel", "")));
+            value(body, "title", id),
+            value(body, "channel", ""));
     }
 
     private PlaybackQueue.Entry queueItem(Map<?, ?> body, String id) {
         return new PlaybackQueue.Entry(id,
-            String.valueOf(body.getOrDefault("title", id)),
-            String.valueOf(body.getOrDefault("channel", "")));
+            value(body, "title", id),
+            value(body, "channel", ""));
     }
 
     private void configureSocket(WsConfig ws) {
@@ -173,8 +173,8 @@ public final class WebPlayerServer {
         ws.onMessage(c -> {
             try {
                 Map<?, ?> m = json.readValue(c.message(), Map.class);
-                String type = String.valueOf(m.getOrDefault("type", ""));
-                String roomId = String.valueOf(m.getOrDefault("room", ""));
+                String type = value(m, "type", "");
+                String roomId = value(m, "room", "");
                 if (roomId.isBlank()) { c.send("{\"type\":\"error\",\"message\":\"Room required\"}"); return; }
 
                 WatchRoom r = plugin.getRooms().get(roomId);
@@ -182,9 +182,9 @@ public final class WebPlayerServer {
 
                 sockets.computeIfAbsent(roomId, k -> ConcurrentHashMap.newKeySet()).add(c);
                 if (type.equals("state")) {
-                    String video = String.valueOf(m.getOrDefault("video", ""));
-                    double time = Double.parseDouble(String.valueOf(m.getOrDefault("time", "0")));
-                    boolean playing = Boolean.parseBoolean(String.valueOf(m.getOrDefault("playing", "false")));
+                    String video = value(m, "video", "");
+                    double time = Double.parseDouble(value(m, "time", "0"));
+                    boolean playing = Boolean.parseBoolean(value(m, "playing", "false"));
                     r.setVideoId(video);
                     r.state(time, playing);
                 }
