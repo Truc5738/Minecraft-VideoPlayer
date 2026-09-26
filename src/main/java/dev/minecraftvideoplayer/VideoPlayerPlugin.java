@@ -19,6 +19,7 @@ public final class VideoPlayerPlugin extends JavaPlugin {
     private YouTubeService youtube;
     private MediaLibrary media;
     private PlaybackQueue queue;
+    private dev.minecraftvideoplayer.screen.ScreenManager screens;
 
     @Override
     public void onEnable() {
@@ -27,6 +28,7 @@ public final class VideoPlayerPlugin extends JavaPlugin {
         youtube = new YouTubeService(this);
         media = new MediaLibrary();
         queue = new PlaybackQueue();
+        screens = new dev.minecraftvideoplayer.screen.ScreenManager();
         loadLibraries();
 
         VideoCommand videoCommand = new VideoCommand(this);
@@ -72,4 +74,5 @@ public final class VideoPlayerPlugin extends JavaPlugin {
     public YouTubeService getYouTube() { return youtube; }
     public MediaLibrary getMedia() { return media; }
     public PlaybackQueue getQueue() { return queue; }
+    public dev.minecraftvideoplayer.screen.ScreenManager getScreens() { return screens; }
 }
