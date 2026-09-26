@@ -180,7 +180,7 @@ public final class WebPlayerServer {
     }
 
     private void configureSocket(WsConfig ws) {
-        ws.onConnect(c -> c.send("{\"type\":\"connected\"}"));
+        ws.onConnect(c -> c.send(json.writeValueAsString(Map.of("type","connected"))));
         ws.onClose(c -> sockets.values().forEach(v -> v.remove(c)));
         ws.onMessage(c -> {
             try {
@@ -192,16 +192,16 @@ public final class WebPlayerServer {
                 WatchRoom r = plugin.getRooms().get(roomId);
                 if (r == null) { c.send("{\"type\":\"error\",\"message\":\"Room not found\"}"); return; }
 
-                sockets.computeIfAbsent(roomId, k -> ConcurrentHashMap.newKeySet()).add(c);
+                sockets.computeIfAbsent(roomId, k -> ConcurrentHashMap.newKeySet()).add(c);\n                c.send(json.writeValueAsString(Map.of("type","room-state","room",roomId,"video",r.videoId(),"title",r.title(),"time",r.time(),"playing",r.playing(),"updatedAt",r.updatedAt(),"viewers",r.viewers())));
                 if (type.equals("state")) {
                     String video = value(m, "video", "");
                     double time = Double.parseDouble(value(m, "time", "0"));
                     boolean playing = Boolean.parseBoolean(value(m, "playing", "false"));
-                    r.setVideoId(video);
+                    r.setVideo(video, value(m, "title", ""));
                     r.state(time, playing);
                 }
                 broadcast(roomId, Map.of(
-                    "type", type, "video", r.videoId(), "time", r.time(), "playing", r.playing()
+                    "type", type, "video", r.videoId(), "title", r.title(), "time", r.time(), "playing", r.playing(), "updatedAt", r.updatedAt()
                 ));
             } catch (Exception e) {
                 c.send("{\"type\":\"error\",\"message\":\"Invalid message\"}");
