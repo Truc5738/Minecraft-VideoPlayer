@@ -38,6 +38,14 @@ iframe,#nativeVideo{width:100%;height:100%;border:0}.controls{display:flex;gap:6
 <button onclick="addQueue()">Add Queue</button><button onclick="cycleRepeat()">Repeat</button><button onclick="toggleShuffle()">Shuffle</button>
 <button onclick="fullscreen()">Fullscreen</button>
 </div><div class="row" style="margin-top:9px"><label>Volume <input id="volume" type="range" min="0" max="100" value="80" oninput="setVolume(this.value)"></label></div></div>
+<div class="box"><h2>Server Movie Library</h2><div class="row">
+<input id="token" type="password" placeholder="Admin token for upload/delete">
+<input id="movieFile" type="file" accept=".mp4,.mov,video/mp4,video/quicktime">
+<button onclick="uploadMovie()">Upload Video</button>
+<button onclick="loadMovies()">Refresh</button>
+</div>
+<div id="uploadStatus" class="muted" style="margin-top:8px">Uploads are stored on the Paper server.</div>
+<div id="movies" class="muted" style="margin-top:8px">No local movies loaded.</div></div>
 <div class="box"><h2>Search Results</h2><div id="results" class="muted">Search to begin.</div></div>
 </section>
 
@@ -83,8 +91,12 @@ function toggleShuffle(){api('/api/queue/shuffle',{method:'POST'}).then(x=>statu
 function nextVideo(){if(room){sendControl('next');return}api('/api/queue/next',{method:'POST'}).then(x=>{if(x.video)playMedia(x.video.id,true)})}
 function previousVideo(){if(room){sendControl('previous');return}api('/api/queue/previous',{method:'POST'}).then(x=>{if(x.video)playMedia(x.video.id,true)})}
 function createPlaylist(){let n=prompt('Playlist name');if(n)api('/api/playlist',{method:'POST',body:JSON.stringify({name:n})}).then(loadLibrary)}
+function adminToken(){return document.getElementById('token').value.trim()||localStorage.getItem('mvp-admin-token')||''}
+function uploadMovie(){let file=document.getElementById('movieFile').files[0];let token=document.getElementById('token').value.trim();let s=document.getElementById('uploadStatus');if(!file){s.textContent='Choose an MP4 or MOV file first.';return}if(!token){s.textContent='Admin token required.';return}localStorage.setItem('mvp-admin-token',token);let fd=new FormData();fd.append('file',file,file.name);s.textContent='Uploading '+file.name+'...';fetch('/api/upload?token='+encodeURIComponent(token),{method:'POST',body:fd}).then(async r=>{let x=await r.json();if(!r.ok)throw new Error(x.error||'Upload failed');s.textContent='Uploaded: '+x.name+' ('+Math.round(x.size/1048576*10)/10+' MB)';loadMovies()}).catch(e=>s.textContent='Upload failed: '+e.message)}
+function loadMovies(){fetch('/api/movies').then(r=>r.json()).then(x=>{let box=document.getElementById('movies');box.innerHTML=(x.items||[]).map(v=>'<div class="item"><b>'+esc(v.name)+'</b> <span class="muted">('+Math.round(v.size/1048576*10)/10+' MB)</span> <button onclick="deleteMovie(\''+esc(v.name)+'\')">Delete</button></div>').join('')||'<span class="muted">No uploaded movies.</span>'}).catch(e=>document.getElementById('movies').textContent='Library unavailable.')}
+function deleteMovie(name){let token=adminToken();if(!token||!confirm('Delete '+name+'?'))return;fetch('/api/movies/'+encodeURIComponent(name)+'?token='+encodeURIComponent(token),{method:'DELETE'}).then(r=>r.json()).then(x=>{if(x.ok)loadMovies()})}
 function loadLibrary(){api('/api/media').then(x=>{let q=document.getElementById('queue');q.innerHTML=(x.queue||[]).map((v,i)=>'<div class="item">'+(i+1)+'. '+esc(v.title)+'</div>').join('')||'<span class="muted">Empty.</span>';let lib=document.getElementById('library'),out='<h3>Favorites</h3>';out+=(x.favorites||[]).map(v=>'<div class="item" onclick="playMedia(\''+esc(v.id)+'\',true)">'+esc(v.title)+'</div>').join('')||'<span class="muted">None</span>';out+='<h3>Playlists</h3>';for(let n in (x.playlists||{}))out+='<div class="pill">'+esc(n)+' ('+x.playlists[n].length+')</div>';out+='<h3>History</h3>'+((x.history||[]).slice(0,10).map(v=>'<div class="item" onclick="playMedia(\''+esc(v.id)+'\',true)">'+esc(v.title)+'</div>').join('')||'<span class="muted">None</span>');lib.innerHTML=out}).catch(()=>{})}
-loadLibrary();if(room){showRoom();connect()}else updateHostUI()
+document.getElementById('token').value=localStorage.getItem('mvp-admin-token')||'';loadMovies();loadLibrary();if(room){showRoom();connect()}else updateHostUI()
 </script></body></html>
 """;
 }
