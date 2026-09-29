@@ -84,7 +84,7 @@ public final class WebPlayerServer {
                 if (playback == null) { ctx.status(404).json(Map.of("error","No decoder on screen")); return; }
                 try {
                     Map<?,?> body = json.readValue(ctx.body(), Map.class);
-                    long positionMs = Math.max(0L, Long.parseLong(value(body,"positionMs","0")));
+                    long positionMs = Math.max(0L, Long.parseLong(value(body,"positionMs","0"))); if (body.containsKey("deltaMs")) positionMs = Math.max(0L, playback.positionMs() + Long.parseLong(value(body,"deltaMs","0")));
                     plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
                         try { playback.seek(positionMs); }
                         catch (Exception ignored) {}
