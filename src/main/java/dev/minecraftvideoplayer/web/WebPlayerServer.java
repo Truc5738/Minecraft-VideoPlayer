@@ -36,6 +36,97 @@ public final class WebPlayerServer {
             .post("/api/admin/save", ctx -> { if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; } plugin.saveLibraries(); ctx.json(Map.of("ok",true)); })
             .post("/api/admin/reload", ctx -> { if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; } plugin.reloadConfig(); ctx.json(Map.of("ok",true)); })
             .delete("/api/admin/room/{id}", ctx -> { if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; } ctx.json(Map.of("ok",plugin.getRooms().close(ctx.pathParam("id")) > 0)); })
+            .get("/api/screens", ctx -> {
+                if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; }
+                List<Map<String,Object>> items = new ArrayList<>();
+                plugin.getScreens().all().values().forEach(screen -> {
+                    Map<String,Object> item = new LinkedHashMap<>();
+                    item.put("id", screen.id());
+                    item.put("owner", screen.owner().toString());
+                    var owner = org.bukkit.Bukkit.getPlayer(screen.owner());
+                    item.put("ownerName", owner == null ? "offline" : owner.getName());
+                    item.put("width", screen.width());
+                    item.put("height", screen.height());
+                    item.put("video", screen.videoId());
+                    item.put("playing", screen.playing());
+                    var decoder = plugin.getScreens().decoder(screen.id());
+                    item.put("positionMs", decoder == null ? 0L : decoder.positionMs());
+                    item.put("durationMs", decoder == null ? 0L : decoder.durationMs());
+                    items.add(item);
+                });
+                ctx.json(Map.of("items", items));
+            })
+            .post("/api/screens/{id}/play", ctx -> {
+                if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; }
+                String id = ctx.pathParam("id");
+                if (plugin.getScreens().get(id) == null) { ctx.status(404).json(Map.of("error","Screen not found")); return; }
+                plugin.getServer().getScheduler().runTask(plugin, () -> plugin.getScreens().play(id, plugin.getScreens().get(id).videoId()));
+                ctx.json(Map.of("ok",true));
+            })
+            .post("/api/screens/{id}/pause", ctx -> {
+                if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; }
+                String id = ctx.pathParam("id");
+                if (plugin.getScreens().get(id) == null) { ctx.status(404).json(Map.of("error","Screen not found")); return; }
+                plugin.getServer().getScheduler().runTask(plugin, () -> plugin.getScreens().pause(id));
+                ctx.json(Map.of("ok",true));
+            })
+            .post("/api/screens/{id}/stop", ctx -> {
+                if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; }
+                String id = ctx.pathParam("id");
+                if (plugin.getScreens().get(id) == null) { ctx.status(404).json(Map.of("error","Screen not found")); return; }
+                plugin.getServer().getScheduler().runTask(plugin, () -> plugin.getScreens().stop(id));
+                ctx.json(Map.of("ok",true));
+            })
+            .post("/api/screens/{id}/seek", ctx -> {
+                if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; }
+                String id = ctx.pathParam("id");
+                var playback = plugin.getScreens().decoder(id);
+                if (playback == null) { ctx.status(404).json(Map.of("error","No decoder on screen")); return; }
+                try {
+                    Map<?,?> body = json.readValue(ctx.body(), Map.class);
+                    long positionMs = Math.max(0L, Long.parseLong(value(body,"positionMs","0")));
+                    plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                        try { playback.seek(positionMs); }
+                        catch (Exception ignored) {}
+                    });
+                    ctx.json(Map.of("ok",true,"positionMs",positionMs));
+                } catch (Exception e) {
+                    ctx.status(400).json(Map.of("error","Invalid positionMs"));
+                }
+            })
+            .post("/api/screens/{id}/load", ctx -> {
+                if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; }
+                String id = ctx.pathParam("id");
+                if (plugin.getScreens().get(id) == null) { ctx.status(404).json(Map.of("error","Screen not found")); return; }
+                try {
+                    Map<?,?> body = json.readValue(ctx.body(), Map.class);
+                    String name = java.nio.file.Paths.get(value(body,"name","")).getFileName().toString();
+                    if (name.isBlank() || !isAllowedMovie(name)) { ctx.status(400).json(Map.of("error","Invalid movie name")); return; }
+                    java.nio.file.Path file = movieDirectory().resolve(name).normalize();
+                    if (!file.startsWith(movieDirectory().toAbsolutePath().normalize()) || !java.nio.file.Files.isRegularFile(file)) {
+                        ctx.status(404).json(Map.of("error","Movie not found"));
+                        return;
+                    }
+                    plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                        try {
+                            var decoder = dev.minecraftvideoplayer.screen.DecoderFactory.create(file.toString());
+                            var playback = new dev.minecraftvideoplayer.screen.DecoderPlayback(
+                                decoder, plugin.getScreens(), plugin.getScreenRenderer(), id);
+                            playback.open(file.toString());
+                            plugin.getServer().getScheduler().runTask(plugin, () -> {
+                                if (plugin.getScreens().get(id) == null) { playback.close(); return; }
+                                plugin.getScreens().attachDecoder(id, playback);
+                                plugin.getScreens().play(id, file.toString());
+                            });
+                        } catch (Exception e) {
+                            plugin.getLogger().warning("Web screen load failed for " + name + ": " + e.getMessage());
+                        }
+                    });
+                    ctx.json(Map.of("ok",true,"screen",id,"movie",name,"status","loading"));
+                } catch (Exception e) {
+                    ctx.status(400).json(Map.of("error","Invalid request"));
+                }
+            })
             .get("/api/health", ctx -> ctx.json(Map.of("status","ok","plugin","Minecraft-VideoPlayer","minecraft","1.26")))
             .get("/api/movies", ctx -> {
                 List<Map<String,Object>> items = new ArrayList<>();
