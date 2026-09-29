@@ -2,8 +2,16 @@ server:
   web-host: "0.0.0.0"
   web-port: 26467
   public-url: ""
-  # Set a strong random value before exposing /admin publicly.
+  # Strong random token. Required for browser uploads/admin API.
   admin-token: ""
+
+upload:
+  enabled: true
+  max-size-mb: 2048
+  allowed-extensions:
+    - mp4
+    - mov
+  movies-directory: "movies"
 
 youtube:
   enabled: true
