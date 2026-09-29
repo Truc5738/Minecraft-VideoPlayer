@@ -1,18 +1,18 @@
 name: Minecraft-VideoPlayer
-version: 1.1.0
+version: 1.2.0
 main: dev.minecraftvideoplayer.VideoPlayerPlugin
 api-version: '26.2'
 author: Truc5738
-description: Unified Minecraft Video Center for Java and Bedrock/PE.
+description: Local movie player with a unified UI, Java web upload, JCodec playback and multi-screen control.
 commands:
   video:
-    description: Open the Video Center
+    description: Open the unified Video Center
     usage: /video
-    aliases: [videos]
+    aliases: [videos, movie, movies]
 permissions:
   videoplayer.use:
     description: Use the Video Center
     default: true
   videoplayer.admin:
-    description: Use admin controls and reload configuration
+    description: Use admin controls, uploads and reload configuration
     default: op
