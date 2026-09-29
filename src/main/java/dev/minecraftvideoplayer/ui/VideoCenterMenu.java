@@ -15,6 +15,7 @@ public final class VideoCenterMenu {
     public static final String TITLE = "Video Center";
     public static final String SCREEN_TITLE = "Screen Manager";
     public static final String SCREEN_CONTROL_TITLE = "Screen Control";
+    public static final String MOVIE_LIBRARY_TITLE = "Movie Library";
 
     private VideoCenterMenu() {}
 
@@ -27,6 +28,7 @@ public final class VideoCenterMenu {
         set(inv, 14, Material.NETHER_STAR, "Favorites", "Open your favorite videos.");
         set(inv, 15, Material.CLOCK, "History", "Open recently watched videos.");
         set(inv, 16, Material.ENDER_PEARL, "Watch Room", "Create or join a synchronized room.");
+        set(inv, 17, Material.MOVIE, "Movie Library", "Play videos uploaded to the server.");
         set(inv, 19, Material.NOTE_BLOCK, "Host Control", "Play, pause, seek and change videos.");
         set(inv, 20, Material.PAINTING, "Screen Manager", "Manage Minecraft video screens.");
         set(inv, 21, Material.JUKEBOX, "Player Settings", "Volume, autoplay, repeat and shuffle.");
@@ -46,6 +48,28 @@ public final class VideoCenterMenu {
         set(inv, 16, Material.REDSTONE, "/video reload", "Reload configuration. Admin only.");
         set(inv, 22, Material.BOOK, "Controls", "Host controls affect synchronized room playback.");
         set(inv, 26, Material.BARRIER, "Close", "Close this menu.");
+        player.openInventory(inv);
+    }
+
+
+    public static void openMovieLibrary(Player player, VideoPlayerPlugin plugin) {
+        Inventory inv = Bukkit.createInventory(null, 54, MOVIE_LIBRARY_TITLE);
+        java.nio.file.Path dir = plugin.getDataFolder().toPath().resolve(plugin.getConfig().getString("upload.movies-directory", "movies")).normalize();
+        try { java.nio.file.Files.createDirectories(dir); } catch (Exception ignored) {}
+        java.io.File[] files = dir.toFile().listFiles();
+        int slot = 0;
+        if (files != null) {
+            java.util.Arrays.sort(files, java.util.Comparator.comparing(java.io.File::getName, String.CASE_INSENSITIVE_ORDER));
+            for (java.io.File file : files) {
+                if (slot >= 45 || !file.isFile()) continue;
+                String n = file.getName().toLowerCase(java.util.Locale.ROOT);
+                if (!(n.endsWith(".mp4") || n.endsWith(".mov"))) continue;
+                set(inv, slot++, Material.FILLED_MAP, file.getName(), "Click to play", Math.max(1L, file.length()/1048576L) + " MB");
+            }
+        }
+        if (slot == 0) set(inv, 22, Material.BARRIER, "No movies", "Upload MP4/MOV at the web player.");
+        set(inv, 49, Material.CHEST, "Upload / Manage", "Open the web player on port 26467.");
+        set(inv, 50, Material.BARRIER, "Close", "Close this menu.");
         player.openInventory(inv);
     }
 
