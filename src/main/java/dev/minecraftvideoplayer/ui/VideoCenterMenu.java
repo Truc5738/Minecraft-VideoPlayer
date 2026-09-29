@@ -28,7 +28,7 @@ public final class VideoCenterMenu {
         set(inv, 14, Material.NETHER_STAR, "Favorites", "Open your favorite videos.");
         set(inv, 15, Material.CLOCK, "History", "Open recently watched videos.");
         set(inv, 16, Material.ENDER_PEARL, "Watch Room", "Create or join a synchronized room.");
-        set(inv, 17, Material.MOVIE, "Movie Library", "Play videos uploaded to the server.");
+        set(inv, 17, Material.CHEST, "Movie Library", "Play videos uploaded to the server.");
         set(inv, 19, Material.NOTE_BLOCK, "Host Control", "Play, pause, seek and change videos.");
         set(inv, 20, Material.PAINTING, "Screen Manager", "Manage Minecraft video screens.");
         set(inv, 21, Material.JUKEBOX, "Player Settings", "Volume, autoplay, repeat and shuffle.");
