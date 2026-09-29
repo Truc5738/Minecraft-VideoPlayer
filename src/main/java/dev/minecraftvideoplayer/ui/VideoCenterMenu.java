@@ -103,6 +103,8 @@ public final class VideoCenterMenu {
         set(inv, 14, Material.SPECTRAL_ARROW, "Seek -10s", "Seek backward 10 seconds.");
         set(inv, 15, Material.ARROW, "Seek +10s", "Seek forward 10 seconds.");
         set(inv, 16, Material.FILLED_MAP, "Screen Info", "ID: " + screen.id(), "State: " + (screen.playing() ? "Playing" : "Paused"), "Size: " + screen.width() + "x" + screen.height(), "Source: " + (screen.videoId().isBlank() ? "None" : screen.videoId()));
+        set(inv, 17, Material.PAINTING, "Resize", "Cycle screen size presets.");
+        set(inv, 18, Material.COMPASS, "Move Here", "Move this screen to your current location.");
         set(inv, 22, Material.BARRIER, "Delete Screen", "Remove this screen.");
         set(inv, 26, Material.PAINTING, "Back", "Return to Screen Manager.");
         player.openInventory(inv);
