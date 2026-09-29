@@ -65,7 +65,7 @@ public final class VideoCenterListener implements Listener {
         if (VideoCenterMenu.MOVIE_LIBRARY_TITLE.equals(title)) {
             if (slot == 49) {
                 player.closeInventory();
-                String url = plugin.getWeb().getPublicUrl(player);
+                String url = plugin.getWebServer().getPublicUrl(player);
                 player.sendMessage(ChatColor.WHITE + "Movie web player: " + url);
                 return;
             }
