@@ -56,6 +56,24 @@ public final class VideoCenterListener implements Listener {
                 case 12 -> { plugin.getScreens().stop(screen.id()); player.sendMessage(ChatColor.WHITE + "Screen " + screen.id() + ": Stop"); }
                 case 13 -> { pendingSource.put(player.getUniqueId(), "screen:" + screen.id()); prompt(player, "Enter a local MP4/MOV path or direct MP4/MOV URL in chat. Type 'cancel' to stop."); }
                 case 14, 15 -> seek(player, screen.id(), slot == 14 ? -10000L : 10000L);
+                case 17 -> {
+                    int[][] sizes = {{4,2},{6,3},{8,4},{10,5},{12,6}};
+                    int current = 0;
+                    for (int i = 0; i < sizes.length; i++) {
+                        if (screen.width() == sizes[i][0] && screen.height() == sizes[i][1]) { current = i; break; }
+                    }
+                    int[] next = sizes[(current + 1) % sizes.length];
+                    screen.resize(next[0], next[1]);
+                    plugin.getScreenRenderer().renderPreview(player, screen);
+                    player.sendMessage(ChatColor.WHITE + "Screen resized to " + next[0] + "x" + next[1] + ".");
+                    VideoCenterMenu.openScreenControl(player, plugin, screen.id());
+                }
+                case 18 -> {
+                    screen.move(player.getLocation());
+                    plugin.getScreenRenderer().renderPreview(player, screen);
+                    player.sendMessage(ChatColor.WHITE + "Screen moved to your current location.");
+                    VideoCenterMenu.openScreenControl(player, plugin, screen.id());
+                }
                 case 22 -> { plugin.getScreens().remove(screen.id()); player.sendMessage(ChatColor.WHITE + "Screen " + screen.id() + " deleted."); VideoCenterMenu.openScreenManager(player, plugin); }
                 case 26 -> VideoCenterMenu.openScreenManager(player, plugin);
                 default -> { }
