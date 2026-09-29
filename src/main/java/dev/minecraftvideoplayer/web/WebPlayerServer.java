@@ -37,6 +37,42 @@ public final class WebPlayerServer {
             .post("/api/admin/reload", ctx -> { if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; } plugin.reloadConfig(); ctx.json(Map.of("ok",true)); })
             .delete("/api/admin/room/{id}", ctx -> { if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; } ctx.json(Map.of("ok",plugin.getRooms().close(ctx.pathParam("id")) > 0)); })
             .get("/api/health", ctx -> ctx.json(Map.of("status","ok","plugin","Minecraft-VideoPlayer","minecraft","1.26")))
+            .get("/api/movies", ctx -> {
+                List<Map<String,Object>> items = new ArrayList<>();
+                for (java.nio.file.Path p : movieDirectory().toFile().listFiles() == null ? List.<java.nio.file.Path>of() : java.util.Arrays.stream(movieDirectory().toFile().listFiles()).map(java.io.File::toPath).toList()) {
+                    if (!java.nio.file.Files.isRegularFile(p) || !isAllowedMovie(p.getFileName().toString())) continue;
+                    try {
+                        items.add(Map.of("name", p.getFileName().toString(), "size", java.nio.file.Files.size(p), "modified", java.nio.file.Files.getLastModifiedTime(p).toMillis()));
+                    } catch (Exception ignored) {}
+                }
+                ctx.json(Map.of("items", items));
+            })
+            .post("/api/upload", ctx -> {
+                if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; }
+                if (!plugin.getConfig().getBoolean("upload.enabled", true)) { ctx.status(403).json(Map.of("error","Uploads disabled")); return; }
+                var upload = ctx.uploadedFile("file");
+                if (upload == null) { ctx.status(400).json(Map.of("error","No file supplied")); return; }
+                String original = java.nio.file.Paths.get(upload.filename()).getFileName().toString();
+                if (!isAllowedMovie(original)) { ctx.status(415).json(Map.of("error","Only configured movie formats are allowed")); return; }
+                long max = Math.max(1L, plugin.getConfig().getLong("upload.max-size-mb", 2048L)) * 1024L * 1024L;
+                if (upload.size() > max) { ctx.status(413).json(Map.of("error","File exceeds upload.max-size-mb")); return; }
+                java.nio.file.Files.createDirectories(movieDirectory());
+                String safe = original.replaceAll("[^A-Za-z0-9._ -]", "_");
+                java.nio.file.Path target = movieDirectory().resolve(safe).normalize();
+                if (!target.getParent().equals(movieDirectory().toAbsolutePath().normalize())) { ctx.status(400).json(Map.of("error","Invalid filename")); return; }
+                try (var in = upload.content()) {
+                    java.nio.file.Files.copy(in, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+                ctx.json(Map.of("ok",true,"name",target.getFileName().toString(),"size",java.nio.file.Files.size(target)));
+            })
+            .delete("/api/movies/{name}", ctx -> {
+                if (!adminAllowed(ctx)) { ctx.status(401).json(Map.of("error","Unauthorized")); return; }
+                String safe = java.nio.file.Paths.get(ctx.pathParam("name")).getFileName().toString();
+                if (!isAllowedMovie(safe)) { ctx.status(400).json(Map.of("error","Invalid movie filename")); return; }
+                java.nio.file.Path target = movieDirectory().resolve(safe).normalize();
+                boolean deleted = java.nio.file.Files.deleteIfExists(target);
+                ctx.json(Map.of("ok",deleted));
+            })
             .post("/api/native/frame/{screenId}", ctx -> {
                 if (!adminAllowed(ctx)) {
                     ctx.status(401).json(Map.of("error", "Unauthorized"));
@@ -89,6 +125,22 @@ public final class WebPlayerServer {
         return "http://127.0.0.1:" + plugin.getConfig().getInt("server.web-port",26467);
     }
     public String getPublicUrl(org.bukkit.command.CommandSender sender) { return getPublicUrl(sender instanceof org.bukkit.entity.Player p ? p : null); }
+
+    private java.nio.file.Path movieDirectory() {
+        String configured = plugin.getConfig().getString("upload.movies-directory", "movies");
+        java.nio.file.Path p = plugin.getDataFolder().toPath().resolve(configured).normalize();
+        java.nio.file.Path root = plugin.getDataFolder().toPath().normalize();
+        return p.startsWith(root) ? p : root.resolve("movies");
+    }
+
+    private boolean isAllowedMovie(String name) {
+        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        for (String ext : plugin.getConfig().getStringList("upload.allowed-extensions")) {
+            String e = ext.toLowerCase(java.util.Locale.ROOT).replace(".", "");
+            if (lower.endsWith("." + e)) return true;
+        }
+        return false;
+    }
 
     private boolean adminAllowed(io.javalin.http.Context ctx){String configured=plugin.getConfig().getString("server.admin-token","");String supplied=ctx.queryParam("token");return !configured.isBlank()&&configured.equals(supplied);}
     private String owner(io.javalin.http.Context ctx){String v=ctx.queryParam("owner");return v==null||v.isBlank()?"web-"+ctx.ip():v.substring(0,Math.min(80,v.length()));}
