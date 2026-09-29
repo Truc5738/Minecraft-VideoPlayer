@@ -26,7 +26,7 @@ public final class VideoCenterListener implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = event.getView().getTitle();
-        if (!VideoCenterMenu.TITLE.equals(title) && !"Video Player Help".equals(title) && !VideoCenterMenu.SCREEN_TITLE.equals(title) && !title.startsWith(VideoCenterMenu.SCREEN_CONTROL_TITLE + " ")) return;
+        if (!VideoCenterMenu.TITLE.equals(title) && !VideoCenterMenu.MOVIE_LIBRARY_TITLE.equals(title) && !"Video Player Help".equals(title) && !VideoCenterMenu.SCREEN_TITLE.equals(title) && !title.startsWith(VideoCenterMenu.SCREEN_CONTROL_TITLE + " ")) return;
 
         event.setCancelled(true);
         if (event.getClickedInventory() == null || event.getClickedInventory() != event.getView().getTopInventory()) return;
@@ -62,6 +62,32 @@ public final class VideoCenterListener implements Listener {
             }
             return;
         }
+        if (VideoCenterMenu.MOVIE_LIBRARY_TITLE.equals(title)) {
+            if (slot == 49) {
+                player.closeInventory();
+                String url = plugin.getWeb().getPublicUrl(player);
+                player.sendMessage(ChatColor.WHITE + "Movie web player: " + url);
+                return;
+            }
+            if (slot == 50) { player.closeInventory(); return; }
+            if (slot >= 0 && slot < 45) {
+                java.nio.file.Path dir = plugin.getDataFolder().toPath().resolve(plugin.getConfig().getString("upload.movies-directory", "movies")).normalize();
+                java.io.File[] files = dir.toFile().listFiles();
+                if (files == null) return;
+                java.util.Arrays.sort(files, java.util.Comparator.comparing(java.io.File::getName, String.CASE_INSENSITIVE_ORDER));
+                int index = 0;
+                for (java.io.File file : files) {
+                    if (!file.isFile()) continue;
+                    String n = file.getName().toLowerCase(java.util.Locale.ROOT);
+                    if (!(n.endsWith(".mp4") || n.endsWith(".mov"))) continue;
+                    if (index++ != slot) continue;
+                    playLocalMovie(player, file.toPath());
+                    return;
+                }
+            }
+            return;
+        }
+
         if ("Video Player Help".equals(title)) {
             if (slot == 26) player.closeInventory();
             return;
@@ -75,6 +101,7 @@ public final class VideoCenterListener implements Listener {
             case 14 -> player.sendMessage(ChatColor.WHITE + "Favorites are stored per player.");
             case 15 -> player.sendMessage(ChatColor.WHITE + "History is stored per player.");
             case 16 -> player.sendMessage(ChatColor.WHITE + "Watch Room: room creation and joining are managed here.");
+            case 17 -> VideoCenterMenu.openMovieLibrary(player, plugin);
             case 19 -> player.sendMessage(ChatColor.WHITE + "Host Control: playback control is restricted to the room host.");
             case 20 -> { player.closeInventory(); player.sendMessage(ChatColor.WHITE + "Screen Manager"); player.sendMessage(ChatColor.WHITE + "Creating a screen at your current location..."); var screen = plugin.getScreens().create(player, 8, 4); plugin.getScreenRenderer().renderPreview(player, screen); player.sendMessage(ChatColor.WHITE + "Screen created: " + screen.id() + " (" + screen.width() + "x" + screen.height() + ")."); }
             case 21 -> player.sendMessage(ChatColor.WHITE + "Player Settings: volume, autoplay, repeat and shuffle.");
@@ -87,6 +114,27 @@ public final class VideoCenterListener implements Listener {
             case 26 -> player.closeInventory();
             default -> { }
         }
+    }
+
+    private void playLocalMovie(Player player, java.nio.file.Path file) {
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            var screen = plugin.getScreens().all().values().stream().filter(s -> s.owner().equals(player.getUniqueId())).findFirst().orElseGet(() -> {
+                var created = plugin.getScreens().create(player, 8, 4);
+                plugin.getScreenRenderer().renderPreview(player, created);
+                return created;
+            });
+            try {
+                var decoder = dev.minecraftvideoplayer.screen.DecoderFactory.create(file.toString());
+                var playback = new dev.minecraftvideoplayer.screen.DecoderPlayback(decoder, plugin.getScreens(), plugin.getScreenRenderer(), screen.id());
+                playback.open(file.toString());
+                plugin.getScreens().attachDecoder(screen.id(), playback);
+                plugin.getScreens().play(screen.id(), file.toString());
+                player.sendMessage(ChatColor.WHITE + "Playing: " + file.getFileName());
+                player.sendMessage(ChatColor.WHITE + "Screen: " + screen.id());
+            } catch (Exception ex) {
+                player.sendMessage(ChatColor.WHITE + "Could not play movie: " + ex.getMessage());
+            }
+        });
     }
 
     private void seek(Player player, String screenId, long delta) {
