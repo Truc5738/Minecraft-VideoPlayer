@@ -82,6 +82,7 @@ public final class VideoCenterListener implements Listener {
         }
         if (VideoCenterMenu.QUEUE_TITLE.equals(title)) {
             if (slot == 49) { VideoCenterMenu.open(player, plugin); return; }
+            if (slot == 50) { player.closeInventory(); return; }
             if (slot >= 0 && slot < 45) {
                 var entries = plugin.getQueue().get(player.getUniqueId().toString());
                 if (slot < entries.size()) {
