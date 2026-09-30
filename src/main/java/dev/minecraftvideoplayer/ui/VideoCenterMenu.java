@@ -16,6 +16,7 @@ public final class VideoCenterMenu {
     public static final String SCREEN_TITLE = "Screen Manager";
     public static final String SCREEN_CONTROL_TITLE = "Screen Control";
     public static final String MOVIE_LIBRARY_TITLE = "Movie Library";
+    public static final String QUEUE_TITLE = "Video Queue";
 
     private VideoCenterMenu() {}
 
@@ -51,6 +52,20 @@ public final class VideoCenterMenu {
         player.openInventory(inv);
     }
 
+
+    public static void openQueue(Player player, VideoPlayerPlugin plugin) {
+        Inventory inv = Bukkit.createInventory(null, 54, QUEUE_TITLE);
+        var entries = plugin.getQueue().get(player.getUniqueId().toString());
+        int slot = 0;
+        for (var entry : entries) {
+            if (slot >= 45) break;
+            set(inv, slot++, Material.FILLED_MAP, entry.title(), "Click to play this queued movie.", "File: " + entry.id());
+        }
+        if (entries.isEmpty()) set(inv, 22, Material.BARRIER, "Queue is empty", "Add server movies from the Movie Library web page.");
+        set(inv, 49, Material.HOPPER, "Back to Video Center", "Return to the main Video Center.");
+        set(inv, 50, Material.BARRIER, "Close", "Close this menu.");
+        player.openInventory(inv);
+    }
 
     public static void openMovieLibrary(Player player, VideoPlayerPlugin plugin) {
         Inventory inv = Bukkit.createInventory(null, 54, MOVIE_LIBRARY_TITLE);
