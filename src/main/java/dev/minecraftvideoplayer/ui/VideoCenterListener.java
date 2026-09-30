@@ -26,7 +26,7 @@ public final class VideoCenterListener implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = event.getView().getTitle();
-        if (!VideoCenterMenu.TITLE.equals(title) && !VideoCenterMenu.MOVIE_LIBRARY_TITLE.equals(title) && !"Video Player Help".equals(title) && !VideoCenterMenu.SCREEN_TITLE.equals(title) && !title.startsWith(VideoCenterMenu.SCREEN_CONTROL_TITLE + " ")) return;
+        if (!VideoCenterMenu.TITLE.equals(title) && !VideoCenterMenu.MOVIE_LIBRARY_TITLE.equals(title) && !"Video Player Help".equals(title) && !VideoCenterMenu.SCREEN_TITLE.equals(title) && !title.startsWith(VideoCenterMenu.SCREEN_CONTROL_TITLE + " ") && !VideoCenterMenu.QUEUE_TITLE.equals(title)) return;
 
         event.setCancelled(true);
         if (event.getClickedInventory() == null || event.getClickedInventory() != event.getView().getTopInventory()) return;
@@ -80,6 +80,29 @@ public final class VideoCenterListener implements Listener {
             }
             return;
         }
+        if (VideoCenterMenu.QUEUE_TITLE.equals(title)) {
+            if (slot == 49) { VideoCenterMenu.open(player, plugin); return; }
+            if (slot >= 0 && slot < 45) {
+                var entries = plugin.getQueue().get(player.getUniqueId().toString());
+                if (slot < entries.size()) {
+                    var entry = entries.get(slot);
+                    java.nio.file.Path file = plugin.getDataFolder().toPath()
+                            .resolve(plugin.getConfig().getString("upload.movies-directory", "movies"))
+                            .resolve(entry.id()).normalize();
+                    java.nio.file.Path root = plugin.getDataFolder().toPath()
+                            .resolve(plugin.getConfig().getString("upload.movies-directory", "movies"))
+                            .normalize();
+                    if (file.startsWith(root) && java.nio.file.Files.isRegularFile(file)) {
+                        playLocalMovie(player, file);
+                        player.sendMessage(ChatColor.WHITE + "Playing queued movie: " + entry.title());
+                    } else {
+                        player.sendMessage(ChatColor.WHITE + "Queued movie file not found: " + entry.title());
+                    }
+                }
+            }
+            return;
+        }
+
         if (VideoCenterMenu.MOVIE_LIBRARY_TITLE.equals(title)) {
             if (slot == 49) {
                 player.closeInventory();
@@ -114,7 +137,7 @@ public final class VideoCenterListener implements Listener {
         switch (slot) {
             case 10 -> { pendingSource.put(player.getUniqueId(), "play"); prompt(player, "Enter a local MP4/MOV file path in chat. Type 'cancel' to stop."); }
             case 11 -> prompt(player, "Type a YouTube search query in chat. Type 'cancel' to stop.");
-            case 12 -> player.sendMessage(ChatColor.WHITE + "Queue manager is available from this menu.");
+            case 12 -> VideoCenterMenu.openQueue(player, plugin);
             case 13 -> player.sendMessage(ChatColor.WHITE + "Playlist manager is available from this menu.");
             case 14 -> player.sendMessage(ChatColor.WHITE + "Favorites are stored per player.");
             case 15 -> player.sendMessage(ChatColor.WHITE + "History is stored per player.");
