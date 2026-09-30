@@ -87,7 +87,7 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','
 function newRoom(){fetch('/api/room/new?owner='+encodeURIComponent(ownerKey)).then(r=>r.json()).then(x=>{room=x.room;isHost=true;showRoom();connect()})}
 function joinRoom(){let id=document.getElementById('roomInput').value.trim();if(id){room=id;showRoom();connect()}}
 function showRoom(){document.getElementById('room').textContent='Room: '+room+' | '+(isHost?'Host':'Viewer');history.replaceState(null,'','?room='+encodeURIComponent(room));updateHostUI()}
-function addQueue(){if(!currentVideo)return;api('/api/queue',{method:'POST',body:JSON.stringify({id:currentVideo,title:currentVideo,channel:''})}).then(loadLibrary)}
+function addQueue(){let id=selectedMovie||currentVideo;if(!id)return;let title=selectedMovie||currentVideo;api('/api/queue',{method:'POST',body:JSON.stringify({id:id,title:title,channel:'Server Movie'})}).then(()=>{document.getElementById('status').textContent='Added to queue: '+title;loadLibrary()})}
 function clearQueue(){api('/api/queue/clear',{method:'POST'}).then(loadLibrary)}
 function toggleFavorite(){if(!currentVideo)return;api('/api/favorite',{method:'POST',body:JSON.stringify({id:currentVideo,title:currentVideo,channel:''})}).then(loadLibrary)}
 function cycleRepeat(){api('/api/queue/repeat',{method:'POST'}).then(x=>statusEl.textContent='Repeat: '+x.repeat)}
